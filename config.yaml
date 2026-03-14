@@ -339,9 +339,9 @@ llm_scoring:
   - name: gpt-4.1-nano
     provider: openai
     model_id: gpt-4.1-nano
-  - name: gemini-2.5-flash-lite
+  - name: gemini-3-flash
     provider: google
-    model_id: gemini-2.5-flash-lite
+    model_id: gemini-3-flash-preview
   conditions:
   - isolated
   scale_min: 0
