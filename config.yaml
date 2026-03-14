@@ -347,15 +347,6 @@ llm_scoring:
   scale_min: 0
   scale_max: 10
   repetitions: 1
-  api_key_rotation:
-    google:
-    - env: GOOGLE_API_KEY_PAID
-      paid: true
-      max_requests: 100
-    - env: GOOGLE_API_KEY_FREE_1
-    - env: GOOGLE_API_KEY_FREE_2
-    openai:
-    - env: OPENAI_API_KEY
   output_dir: data/llm_scores
 analysis:
   output_dir: results
