@@ -74,14 +74,18 @@ def _call_with_retry(provider: str, model_id: str, user_prompt: str,
         try:
             if provider == "google":
                 from google import genai
+                from google.genai import types
                 client = genai.Client(api_key=api_key or os.environ["GOOGLE_API_KEY"])
                 response = client.models.generate_content(
                     model=model_id,
                     contents=user_prompt,
-                    config={
-                        "system_instruction": SYSTEM_PROMPT,
-                        "temperature": 0.0,
-                    },
+                    config=types.GenerateContentConfig(
+                        system_instruction=SYSTEM_PROMPT,
+                        temperature=0.0,
+                        thinking_config=types.ThinkingConfig(
+                            thinking_level="minimal"
+                        ),
+                    ),
                 )
                 return response.text
             elif provider == "openai":
@@ -93,8 +97,7 @@ def _call_with_retry(provider: str, model_id: str, user_prompt: str,
                         {"role": "system", "content": SYSTEM_PROMPT},
                         {"role": "user", "content": user_prompt},
                     ],
-                    temperature=0.0,
-                    max_tokens=16,
+                    max_completion_tokens=1024,
                 )
                 return response.choices[0].message.content
         except Exception as e:
