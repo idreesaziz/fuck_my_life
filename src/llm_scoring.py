@@ -117,6 +117,7 @@ def _call_with_retry(provider: str, model_id: str, user_prompt: str,
 def _score_model(samples: list[dict], model_cfg: dict,
                  output_dir: Path, api_key: str | None = None) -> list[dict]:
     """Score all samples for one model. Checkpoints every 50."""
+    output_dir.mkdir(parents=True, exist_ok=True)
     provider = model_cfg["provider"]
     model_id = model_cfg["model_id"]
     model_name = model_cfg["name"]

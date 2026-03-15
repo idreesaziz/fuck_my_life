@@ -336,9 +336,9 @@ quality:
   output_dir: data/scores
 llm_scoring:
   models:
-  - name: gpt-4.1-nano
+  - name: gpt-5-mini
     provider: openai
-    model_id: gpt-4.1-nano
+    model_id: gpt-5-mini-2025-08-07
   - name: gemini-3-flash
     provider: google
     model_id: gemini-3-flash-preview
