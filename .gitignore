@@ -7,3 +7,7 @@ dist/
 build/
 .venv/
 venv/
+
+# Large data files — scores are committed, raw text is not
+data/corpus/
+data/degraded/

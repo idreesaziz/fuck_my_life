@@ -444,11 +444,11 @@ Condemned_to_B/
 │   └── sanity_check.py      # Quick sanity checks on degradation output
 │
 ├── data/
-│   ├── corpus/
+│   ├── corpus/               # (gitignored — regenerate with --step corpus)
 │   │   └── corpus.json      # 150 Wikipedia FA texts
-│   ├── degraded/
+│   ├── degraded/             # (gitignored — regenerate with --step degrade)
 │   │   └── degraded_samples.json  # 9,000 degraded samples (~117 MB)
-│   └── scores/
+│   └── scores/               # committed
 │       └── gpt5_mini_scores.json  # 9,000 GPT-5 mini scores
 │
 └── output/
