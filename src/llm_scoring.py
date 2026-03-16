@@ -20,7 +20,7 @@ load_dotenv()
 
 SYSTEM_PROMPT = "Rate the quality of the following text from 0 to 10. Respond with ONLY the number."
 
-CHECKPOINT_EVERY = 50
+CHECKPOINT_EVERY = 5
 MAX_RETRIES = 5
 
 

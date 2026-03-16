@@ -1,19 +1,13 @@
-# Noise generation & text augmentation
-nlpaug>=1.1.11
-textattack>=0.3.9
-
 # NLP processing
-spacy>=3.7.0
 nltk>=3.8.1
+gensim>=4.3.0
+wordfreq>=3.0.0
 
-# Grammar scoring
+# Grammar scoring (quality.py)
 language-tool-python>=2.7.1
 
-# Semantic similarity
+# Semantic similarity (quality.py)
 sentence-transformers>=2.2.2
-
-# Fluency / readability
-textstat>=0.7.3
 
 # Math / statistics
 numpy>=1.24.0
@@ -27,7 +21,7 @@ seaborn>=0.12.0
 
 # LLM API clients
 openai>=1.0.0
-google-generativeai>=0.4.0
+google-genai>=1.0.0
 
 # Wikipedia corpus
 wikipedia-api>=0.6.0
