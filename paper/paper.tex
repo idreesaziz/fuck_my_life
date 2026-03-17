@@ -1,4 +1,4 @@
-\documentclass[11pt]{article}
+\documentclass[11pt,twocolumn]{article}
 
 % ── Packages ──────────────────────────────────────────────────
 \usepackage[utf8]{inputenc}
@@ -48,7 +48,7 @@
 % ABSTRACT
 % ══════════════════════════════════════════════════════════════
 \begin{abstract}
-When large language models (LLMs) are asked to rate text quality on a numeric scale, they systematically avoid extreme scores---compressing their responses into a narrow interior band regardless of true quality variation. We present a controlled experiment measuring this \emph{score compression} effect across two frontier models (GPT-5~mini and Gemini~3~Flash) using 9{,}000 text samples derived from 150 expert-authored articles sourced from The Conversation (theconversation.com). Each article is degraded along four independent quality axes (grammar, coherence, information, lexical sophistication) at five controlled intensity levels, producing a known ground-truth quality gradient. Neither model ever assigns a score of 0 or 10 on a 0--10 scale, despite calibrated simulations predicting hundreds of such scores. Both models compress the effective scoring range to approximately 62--69\% of the ideal range, with compression statistically confirmed via block-bootstrap confidence intervals. A three-way linear mixed-effects model reveals significant main effects of degradation level, axis, and model, along with all two- and three-way interactions. Inter-model agreement is high (Pearson $r = 0.84$, Spearman $\rho = 0.82$), yet Gemini scores systematically higher than GPT by a median of +1 point (Wilcoxon $p < 10^{-300}$, rank-biserial $r = 0.71$). Intra-condition reliability is excellent (ICC $> 0.90$ for both models). These findings demonstrate that LLM-based text evaluation is subject to a robust, reproducible distributional bias that compresses scores away from scale endpoints, with practical implications for any application relying on LLM-generated quality ratings.
+When large language models (LLMs) are asked to rate text quality on a numeric scale, they systematically avoid extreme scores---compressing their responses into a narrow interior band regardless of true quality variation. We present a controlled experiment measuring this \emph{score compression} effect across two frontier models (GPT-5~mini and Gemini~3~Flash) using 9{,}000 text samples derived from 150 expert-authored articles sourced from The Conversation (theconversation.com). Each article is degraded along four independent quality axes (grammar, coherence, information, lexical sophistication) at five controlled intensity levels, producing a known ground-truth quality gradient. Neither model ever assigns a score of 0 or 10 on a 0--10 scale, despite calibrated simulations predicting hundreds of such scores. Both models compress the effective scoring range to approximately 62--69\% of the ideal range, with compression statistically confirmed via block-bootstrap confidence intervals. A three-way linear mixed-effects model reveals significant main effects of degradation level, axis, and model, along with all two- and three-way interactions. Inter-model agreement is high (Pearson $r = 0.84$, Spearman $\rho = 0.82$), yet Gemini scores systematically higher than GPT by a median of +1 point (Wilcoxon $p < 10^{-300}$, rank-biserial $r = 0.71$). Intra-condition reliability is excellent (ICC $> 0.90$ for both models). A post-hoc affine calibration experiment on a held-out test set reduces root-mean-square error against the ideal score by 12--27\%, confirming that the distortion is systematic and partially correctable, though substantial residual error remains. These findings demonstrate that LLM-based text evaluation is subject to a robust, reproducible distributional bias that compresses scores away from scale endpoints, with practical implications for any application relying on LLM-generated quality ratings.
 \end{abstract}
 
 \textbf{Keywords:} large language models, text evaluation, score compression, distributional bias, calibration
@@ -62,6 +62,8 @@ When large language models (LLMs) are asked to rate text quality on a numeric sc
 Large language models are increasingly deployed as automated text evaluators---grading student essays, rating content quality, scoring summaries, and benchmarking generated text~\citep{zheng2023judging}. These applications implicitly assume that LLMs can map text quality onto numeric scales with reasonable fidelity. Yet anecdotal and preliminary evidence suggests that LLMs exhibit a systematic reluctance to use the extremes of any provided rating scale. A pristine, publication-quality text that a human expert might comfortably rate 9 or 10 out of 10 consistently receives a 7 or 8 from an LLM. Conversely, heavily corrupted, barely readable text rarely drops below 2 or 3.
 
 This behavior---which we term \emph{score compression}---has significant practical consequences. If the effective scoring range is compressed from $[0, 10]$ to approximately $[2, 9]$, then the discriminative resolution of the scale is reduced by 30\% or more. Fine-grained quality distinctions are lost, ranking reliability degrades, and threshold-based decisions (\eg ``pass if score $\geq 7$'') become miscalibrated.
+
+To quantify this gap precisely: if LLMs were perfectly calibrated, a text degraded to fraction $\lambda$ of its original quality should receive a score $S = 10(1 - \lambda)$. Instead, we observe approximately $S \approx 8 - 6.5\lambda$ for GPT-5~mini and $S \approx 8 - 6.2\lambda$ for Gemini~3~Flash---the intercept falls short of~10 and the slope attains only $\sim$65\% of the ideal gradient, compressing the usable scoring range by roughly a third.
 
 In this paper, we present a rigorous, controlled experiment designed to measure score compression precisely. Our approach has three key features:
 
@@ -78,6 +80,8 @@ We declare three primary outcomes \emph{a priori}:
     \item The median paired score difference between models on identical samples.
 \end{enumerate}
 
+Our contributions go beyond documenting central tendency bias in a new modality. While prior work has noted qualitatively that LLMs tend toward ``safe'' interior scores, we provide: (i)~a \emph{quantified} compression magnitude against an algebraically defined ground truth, (ii)~cross-model replication showing the effect generalizes across providers and architectures, (iii)~axis-specific sensitivity profiles revealing that compression severity depends on the quality dimension under evaluation, and (iv)~a calibration recovery experiment demonstrating that a simple affine transform reduces the calibration gap by 12--27\%, confirming that the distortion is systematic and partially correctable.
+
 % ══════════════════════════════════════════════════════════════
 % 2. RELATED WORK
 % ══════════════════════════════════════════════════════════════
@@ -86,9 +90,11 @@ We declare three primary outcomes \emph{a priori}:
 
 The use of LLMs as evaluators has grown rapidly since the introduction of ``LLM-as-a-judge'' frameworks~\citep{zheng2023judging}. Studies have examined positional bias (preference for responses presented first or second), verbosity bias (preference for longer outputs), and self-enhancement bias (preference for outputs from the same model family)~\citep{wang2023large}. However, the distributional properties of LLM-generated numeric scores---particularly the systematic avoidance of scale endpoints---have received comparatively little attention.
 
-Central tendency bias is well-documented in human rating contexts. Raters often avoid extreme categories on Likert scales, producing distributions compressed around the midpoint~\citep{stevens1971issues}. Whether LLMs exhibit analogous biases due to their training on human-generated rating data, reinforcement learning from human feedback (RLHF), or architectural constraints remains an open question.
+\textbf{Central tendency bias in human rating.} Central tendency bias is well-documented in psychometrics: human raters systematically avoid extreme categories on Likert and other bounded scales, producing distributions compressed around the midpoint~\citep{stevens1971issues}. This tendency is modulated by rater expertise, scale length, and anchoring~\citep{guilford1954psychometric}. In automated essay scoring (AES), neural models trained on human ratings inherit these distributional properties, and post-hoc calibration methods such as beta scaling have been proposed to recover lost range~\citep{ke2019automated}. Whether LLMs exhibit analogous biases due to their training on human-generated rating data, reinforcement learning from human feedback (RLHF), or architectural constraints remains an open question.
 
-Our work differs from prior LLM evaluation studies in that we do not compare LLM judgments against human judgments on naturalistic text. Instead, we construct a synthetic but precisely controlled quality gradient, enabling direct measurement of calibration fidelity without human annotation noise.
+\textbf{LLM-based evaluation.} Recent work has increasingly employed LLMs as stand-in evaluators for machine translation~\citep{kocmi2023large}, summarization, and open-ended generation. \citet{kocmi2023large} showed that GPT-based metrics achieve state-of-the-art correlation with human MT judgments but did not examine the distributional properties of the scores themselves. \citet{liu2023calibrating} demonstrated that LLM-generated evaluation scores exhibit significant miscalibration and proposed decomposed prompting strategies to improve alignment with human judgments.
+
+Our work differs from these studies in that we do not compare LLM judgments against human judgments on naturalistic text. Instead, we construct a synthetic but precisely controlled quality gradient, enabling direct measurement of calibration fidelity without human annotation noise.
 
 % ══════════════════════════════════════════════════════════════
 % 3. EXPERIMENTAL DESIGN
@@ -111,7 +117,9 @@ Each article is degraded along exactly one of four orthogonal quality axes at on
     \item \textbf{Lexical} ($L$): Flattens vocabulary diversity by replacing content words with more common synonyms using GloVe embeddings, simulating lexical simplification.
 \end{itemize}
 
-At $\lambda = 0$, the original text is returned unchanged. Each degradation function is deterministic: a per-sample seed is computed via $\text{MD5}(\text{title} \| \text{axis} \| \text{level} \| \text{rep}) \bmod 2^{31}$, ensuring bitwise reproducibility.
+At $\lambda = 0$, the original text is returned unchanged. The maximum degradation level is $\lambda = 0.8$ rather than $1.0$: at full intensity, several axes produce output that is no longer parseable as coherent text (\eg information deletion removes nearly all content words, grammar corruption introduces errors in every sentence), which risks triggering refusal or confusion rather than meaningful scoring. Capping at $0.8$ ensures that even maximally degraded texts remain recognizably textual.
+
+The goal is controlled perturbation with known ground truth, not ecological validity; the degradation axes are designed to isolate specific quality dimensions in a way that naturalistic quality variation cannot. Each degradation function is deterministic: a per-sample seed is computed via $\text{MD5}(\text{title} \| \text{axis} \| \text{level} \| \text{rep}) \bmod 2^{31}$, ensuring bitwise reproducibility.
 
 \subsection{Factorial Design}
 
@@ -141,7 +149,7 @@ Gemini 3 Flash & Google & 0.0 \\
 \end{tabular}
 \end{table}
 
-GPT-5~mini is a reasoning model that allocates internal thinking tokens before producing output; temperature cannot be set below 1.0. Gemini~3~Flash uses minimal thinking with temperature 0.0 for determinism.
+GPT-5~mini is a reasoning model that allocates internal thinking tokens before producing output; temperature cannot be set below 1.0.\footnote{OpenAI API documentation for reasoning models (o-series and derivatives) states: ``temperature is fixed at 1 and cannot be modified.'' See \url{https://platform.openai.com/docs/guides/reasoning}.} Gemini~3~Flash uses minimal thinking with temperature 0.0 for determinism.
 
 % ══════════════════════════════════════════════════════════════
 % 4. RESULTS
@@ -155,12 +163,12 @@ We organize results around our three primary outcomes, followed by secondary ana
 
 Table~\ref{tab:dist} summarizes the overall score distributions. Both models use only a subset of the 0--10 scale: GPT-5~mini produces scores in $[1, 9]$ and Gemini~3~Flash in $[2, 9]$. Neither model ever assigns a score of 0 or 10 across all 9{,}000 samples. Figure~\ref{fig:histograms} visualizes the full score distributions, with red arrows highlighting the empty bins at 0 and 10.
 
-\begin{figure}[t]
+\begin{figure*}[t]
 \centering
 \includegraphics[width=\textwidth]{G3_score_histograms.png}
 \caption{Overall score distributions for both models ($n = 9{,}000$ per model). Red arrows indicate scores of 0 and 10, which are never assigned. GPT-5~mini peaks at 2; Gemini~3~Flash peaks at 4.}
 \label{fig:histograms}
-\end{figure}
+\end{figure*}
 
 \begin{table}[t]
 \centering
@@ -182,12 +190,12 @@ Count of 10s & 0 & 0 \\
 \end{tabular}
 \end{table}
 
-\begin{figure}[t]
+\begin{figure*}[t]
 \centering
 \includegraphics[width=\textwidth]{G4_undegraded_dist.png}
 \caption{Score distribution for pristine (undegraded, $\lambda = 0.0$) texts only ($n = 1{,}800$ per model). Both models concentrate scores at 8--9, with neither ever assigning 10 even to expert-authored, editorially curated articles.}
 \label{fig:undegraded}
-\end{figure}
+\end{figure*}
 
 \subsection{Boundary Avoidance}
 
@@ -195,7 +203,7 @@ To assess whether the absence of extreme scores is merely a consequence of the e
 
 \subsection{Primary Outcome 1: Compression Ratio}
 
-We define the compression ratio as the observed mean score range divided by the ideal range under perfect linear calibration:
+We define the compression ratio as the observed mean score range divided by the ideal range under perfect linear calibration. The reference model assumes that a perfectly calibrated scorer would map degradation level $\lambda$ to a score $S = 10(1 - \lambda)$, yielding 10 for pristine text and linearly decreasing with degradation intensity. Under this model, the expected score span between $\lambda = 0$ and $\lambda = 0.8$ is $10(1 - 0) - 10(1 - 0.8) = 8$ points. We use this span rather than the full 0--10 range because our experiment does not include $\lambda = 1.0$ (see below), and the reference must match the experimental conditions:
 \begin{equation}
     \rho = \frac{\bar{S}(\lambda = 0) - \bar{S}(\lambda = 0.8)}{10(1 - 0) - 10(1 - 0.8)} = \frac{\bar{S}(0) - \bar{S}(0.8)}{8}
     \label{eq:compression}
@@ -221,7 +229,7 @@ Both models compress the effective scoring range to well below the ideal (Table~
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=\textwidth]{G9_calibration.png}
+\includegraphics[width=\columnwidth]{G9_calibration.png}
 \caption{Calibration plot: observed mean scores vs.\ the perfect calibration reference line ($S = 10(1 - \lambda)$). The shaded area represents the compression gap---the scoring range lost to boundary avoidance.}
 \label{fig:calibration}
 \end{figure}
@@ -256,24 +264,24 @@ The average slope across axes is $-6.46$ for GPT-5~mini and $-6.18$ for Gemini~3
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=\textwidth]{G8_forest_plot.png}
+\includegraphics[width=\columnwidth]{G8_forest_plot.png}
 \caption{Forest plot of regression slopes ($\beta_1$) with 95\% CIs for each axis$\times$model combination. All slopes are significantly negative. Information deletion elicits the steepest response; coherence disruption the shallowest.}
 \label{fig:forest}
 \end{figure}
 
-\begin{figure}[t]
+\begin{figure*}[t]
 \centering
 \includegraphics[width=\textwidth]{G1_dose_response.png}
 \caption{Dose-response curves: mean LLM score vs.\ degradation level for each axis, with both models overlaid. Shaded bands represent 95\% block-bootstrap confidence intervals (resampling articles, 5{,}000 iterations). The dashed gray line shows perfect calibration. Note the concave shape---sensitivity diminishes at higher degradation levels.}
 \label{fig:doseresponse}
-\end{figure}
+\end{figure*}
 
-\begin{figure}[t]
+\begin{figure*}[t]
 \centering
 \includegraphics[width=\textwidth]{G2_cross_axis.png}
 \caption{Cross-axis sensitivity comparison per model. Both models are most sensitive to information deletion and least sensitive to coherence disruption, though the magnitude of the gap differs.}
 \label{fig:crossaxis}
-\end{figure}
+\end{figure*}
 
 \subsection{Non-linearity}
 
@@ -320,7 +328,7 @@ Lexical & $-0.675$ & $-0.661$ \\
 A three-way linear mixed-effects model with the specification
 
 \begin{equation}
-    S_{ijk} \sim \lambda \times \textsc{Axis} \times \textsc{Model} + (1 + \lambda \mid \text{Article})
+    S_{ijk} \sim \lambda \times \mathrm{Axis} \times \mathrm{Model} + (1 + \lambda \mid \text{Article})
 \end{equation}
 
 \noindent converged successfully with random intercepts and slopes. Key findings (full coefficients in Supplementary Material):
@@ -329,7 +337,7 @@ A three-way linear mixed-effects model with the specification
     \item The main effect of degradation level is large and negative ($\beta = -4.76$, $z = -45.6$, $p < 10^{-300}$).
     \item The main effect of model (Gemini vs.\ GPT) is non-significant at the intercept ($\beta = +0.07$, $p = 0.25$), indicating comparable baseline scoring.
     \item All axis effects are significant, with grammar showing the largest intercept reduction ($\beta = -1.49$, $z = -25.1$).
-    \item Critically, the three-way \textsc{Level}$\times$\textsc{Axis}$\times$\textsc{Model} interactions are all significant, confirming that the two models differ in their axis-specific sensitivity profiles. The largest three-way interaction is \textsc{Level}$\times$\textsc{Lexical}$\times$\textsc{Gemini} ($\beta = +1.93$, $z = +11.2$), indicating that Gemini is substantially less sensitive to lexical degradation than GPT.
+    \item Critically, the three-way $\mathrm{Level} \times \mathrm{Axis} \times \mathrm{Model}$ interactions are all significant, confirming that the two models differ in their axis-specific sensitivity profiles. The largest three-way interaction is $\mathrm{Level} \times \mathrm{Lexical} \times \mathrm{Gemini}$ ($\beta = +1.93$, $z = +11.2$), indicating that Gemini is substantially less sensitive to lexical degradation than GPT.
     \item Random effects: article-level intercept variance $= 0.54$; article-level slope variance $= 0.49$, indicating meaningful between-article variability in both baseline score and degradation sensitivity.
 \end{itemize}
 
@@ -358,14 +366,14 @@ Despite high overall agreement (Table~\ref{tab:intermodel}), Gemini~3~Flash scor
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=\textwidth]{G10_inter_model_scatter.png}
+\includegraphics[width=\columnwidth]{G10_inter_model_scatter.png}
 \caption{Inter-model agreement scatter plot ($n = 9{,}000$ paired samples). Each point is one sample, jittered, colored by degradation level. The dashed line is the identity line; points above it indicate Gemini scored higher. Marginal histograms show each model's score distribution.}
 \label{fig:scatter}
 \end{figure}
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=\textwidth]{G11_paired_diff.png}
+\includegraphics[width=\columnwidth]{G11_paired_diff.png}
 \caption{Distribution of paired score differences (Gemini $-$ GPT). The distribution is right-shifted with a median of $+1$ and mean of $+0.89$, confirming systematic positive bias.}
 \label{fig:paireddiff}
 \end{figure}
@@ -374,37 +382,62 @@ Despite high overall agreement (Table~\ref{tab:intermodel}), Gemini~3~Flash scor
 
 Levene's test confirms significant variance heterogeneity across degradation levels for both models (GPT: $W = 136.6$, $p < 10^{-113}$; Gemini: $W = 183.6$, $p < 10^{-151}$). Score variance peaks at $\lambda = 0.2$ for both models (GPT: $\sigma^2 = 3.22$; Gemini: $\sigma^2 = 2.37$) and is lowest at $\lambda = 0.0$ (GPT: $\sigma^2 = 1.02$; Gemini: $\sigma^2 = 0.77$). This ``fan-out-then-in'' pattern reflects ceiling compression at low degradation and floor compression at high degradation. The per-level score distributions (Figure~\ref{fig:perlevel}), boxplots (Figure~\ref{fig:boxplots}), and violin plots (Figure~\ref{fig:violins}) all visualize this heteroscedasticity.
 
-\begin{figure}[t]
+\begin{figure*}[t]
 \centering
 \includegraphics[width=\textwidth]{G5_per_level_dist.png}
 \caption{Score distributions by degradation level. At $\lambda = 0.0$, scores concentrate tightly at 8--9. As degradation increases, the distribution shifts leftward and broadens, then reconcentrates at 2--4 by $\lambda = 0.8$.}
 \label{fig:perlevel}
-\end{figure}
+\end{figure*}
 
-\begin{figure}[t]
-\centering
-\includegraphics[width=\textwidth]{G6_boxplots_grid.png}
-\caption{Score distributions by axis and level for each model. Boxes show IQR; whiskers extend to 1.5$\times$IQR. The interquartile range is narrowest at the highest and lowest degradation levels, reflecting ceiling and floor compression.}
-\label{fig:boxplots}
-\end{figure}
+Additional visualizations of these distributions---including boxplots by axis and level (Figure~\ref{fig:boxplots}) and violin plots by level and model (Figure~\ref{fig:violins})---are provided in the Supplementary Material.
 
-\begin{figure}[t]
+\subsection{Calibration Recovery}
+\label{sec:calibration}
+
+The compression results above raise a natural question: can the bias be corrected post hoc? We investigate whether a simple learned calibration function can recover the lost scoring range. We split the 150 source articles into a training set (112 articles, 7{,}140 samples) and a held-out test set (28 articles, 1{,}860 samples), stratified by category, and fit two calibration functions on the training set: an affine transform $\hat{S} = aS_{\text{raw}} + b$ and a four-parameter sigmoid $\hat{S} = d + c / (1 + e^{-a(S_{\text{raw}} - b)})$. We evaluate on the held-out test set to avoid overfitting.
+
+Table~\ref{tab:calibration} reports the results. Affine calibration reduces the root-mean-square error (RMSE) against the ideal score by 27\% for GPT-5~mini ($2.56 \to 1.87$) and 12\% for Gemini~3~Flash ($1.82 \to 1.60$). The sigmoid offers negligible further improvement over the affine for both models, indicating that the compression is well approximated as a linear distortion rather than a non-linear warping. Critically, rank-order correlations (Kendall $\tau$, Spearman $\rho$) are unchanged by calibration, as expected for monotonic transforms---the models' relative ordering of texts is unaffected.
+
+\begin{table}[t]
 \centering
-\includegraphics[width=\textwidth]{G7_violins.png}
-\caption{Violin plots of score distributions by degradation level and model. The bimodal shape at $\lambda = 0.2$ reflects the mixture of high and low scores as degradation begins to take effect.}
-\label{fig:violins}
-\end{figure}
+\caption{Calibration recovery on held-out test set (28 articles, 1{,}860 samples). RMSE is computed against the ideal score $S^* = 10(1 - \lambda)$.}
+\label{tab:calibration}
+\begin{tabular}{@{}llcccc@{}}
+\toprule
+\textbf{Model} & \textbf{Calib.} & \textbf{RMSE} & $\Delta$\textbf{RMSE} & \textbf{Kendall} $\tau$ & \textbf{Spearman} $\rho$ \\
+\midrule
+\multirow{2}{*}{GPT-5 mini}
+  & Raw    & 2.56 & ---    & 0.623 & 0.734 \\
+  & Affine & 1.87 & $-$27\% & 0.623 & 0.734 \\
+\midrule
+\multirow{2}{*}{Gemini 3 Flash}
+  & Raw    & 1.82 & ---    & 0.728 & 0.821 \\
+  & Affine & 1.60 & $-$12\% & 0.728 & 0.821 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Figure~\ref{fig:calibrecovery} visualizes the effect: the affine-calibrated dose-response curve is pulled closer to the ideal line $S = 10(1 - \lambda)$, narrowing the shaded compression gap, though a residual error of 1.6--1.9 RMSE points remains even after calibration. This residual reflects the models' imperfect rank discrimination---their inability to linearly separate degradation levels---which no monotonic transform can correct.
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{G15_calibration_recovery.png}
+\caption{Dose-response curves before (solid) and after (dashed) affine calibration, against the ideal reference line (dotted black). Calibration narrows the gap between observed and ideal scores but cannot eliminate it entirely: the residual error reflects rank-order imprecision, not a correctable offset.}
+\label{fig:calibrecovery}
+\end{figure*}
+
+These results carry a dual message. On the one hand, a simple two-parameter affine correction---requiring only a modest calibration set---recovers a meaningful fraction of the lost accuracy, making post-hoc calibration a practical and low-cost mitigation strategy. On the other hand, the substantial residual RMSE confirms that compression is not purely an offset problem: the models genuinely fail to spread scores across the full range, losing discriminative information that cannot be recovered by rescaling.
 
 \subsection{Intra-Condition Reliability}
 
 Intraclass correlation coefficients (ICC(1,1)) computed across the three repetitions per condition indicate excellent scoring consistency: overall ICC $= 0.926$ for GPT-5~mini and $0.905$ for Gemini~3~Flash. Gemini achieves particularly high consistency on pristine texts (ICC $= 0.989$ at $\lambda = 0.0$), likely reflecting the determinism afforded by temperature 0.0. The mean coefficient of variation across conditions is 0.148 for GPT and 0.094 for Gemini (Table~\ref{tab:icc}). Figure~\ref{fig:consistency} presents a heatmap of mean CV by axis and level.
 
-\begin{figure}[t]
+\begin{figure*}[t]
 \centering
 \includegraphics[width=\textwidth]{G12_rep_consistency.png}
 \caption{Scoring consistency heatmap: mean coefficient of variation (CV) across three repetitions, by axis and degradation level. Lower values (lighter) indicate more consistent scoring. Gemini achieves near-perfect consistency (CV $\approx 0$) on pristine texts.}
 \label{fig:consistency}
-\end{figure}
+\end{figure*}
 
 \begin{table}[t]
 \centering
@@ -434,12 +467,12 @@ Within-model effect sizes for the undegraded-vs.-maximally-degraded contrast are
 
 \textbf{Category effects.} Kruskal-Wallis tests on undegraded scores ($\lambda = 0.0$) reveal significant category differences for both models (GPT: $H = 202.6$, $p < 10^{-42}$; Gemini: $H = 377.1$, $p < 10^{-80}$). Both models score Science \& Technology highest (GPT: 8.44; Gemini: 8.73) and Politics \& Society lowest (GPT: 7.58; Gemini: 7.88), as shown in Figure~\ref{fig:category}. This suggests that even among expert-authored articles from a single platform, LLMs exhibit domain-dependent scoring preferences.
 
-\begin{figure}[t]
+\begin{figure*}[t]
 \centering
 \includegraphics[width=\textwidth]{G13_category_effects.png}
 \caption{Undegraded scores ($\lambda = 0.0$) by article category. Both models score Science \& Technology highest and Politics \& Society lowest, despite all articles being expert-authored pieces from The Conversation of comparable editorial quality.}
 \label{fig:category}
-\end{figure}
+\end{figure*}
 
 \subsection{Multiple Testing Correction}
 
@@ -457,12 +490,12 @@ Our results demonstrate that score compression is a robust, reproducible phenome
 
 The compression manifests asymmetrically. At the ceiling, pristine texts receive mean scores of 8.0--8.3 rather than the expected 10 (Figure~\ref{fig:undegraded}). At the floor, maximally degraded texts receive mean scores of 2.5--3.3 rather than the expected 2. The net effect is a concave dose-response curve, confirmed by significant quadratic terms in all eight axis$\times$model regressions. The residual diagnostics (Figure~\ref{fig:residuals}) further confirm the non-linear relationship.
 
-\begin{figure}[t]
+\begin{figure*}[t]
 \centering
 \includegraphics[width=\textwidth]{G14_residuals.png}
 \caption{Residual diagnostics from linear regression of score on degradation level. Left: residuals vs.\ fitted values with LOWESS smoother (red), showing systematic curvature. Right: Q-Q plots showing heavy-tailed, discrete residuals---expected for bounded integer scores.}
 \label{fig:residuals}
-\end{figure}
+\end{figure*}
 
 \subsection{Axis-Specific Sensitivity}
 
@@ -489,11 +522,16 @@ These findings carry several practical implications:
     \item \textbf{Model-specific thresholds.} Applications using score thresholds must calibrate per model. A ``good'' score of 7 from GPT-5~mini is not equivalent to a 7 from Gemini~3~Flash.
     \item \textbf{Ordinal, not interval.} LLM scores should be treated as ordinal rather than interval data. The spacing between adjacent scores is not uniform, and the scale has effective rather than nominal endpoints.
     \item \textbf{Axis awareness.} Compression severity varies by quality dimension. Users seeking to evaluate coherence should be aware that LLMs may be less sensitive to discourse-level quality variation.
+    \item \textbf{Prompt engineering as mitigation.} Our scoring prompt is intentionally minimal (unanchored, no rubric, no examples). Richer prompt designs---including detailed rubrics with anchor examples, chain-of-thought reasoning, or decomposed evaluation across sub-dimensions---may partially mitigate compression by providing explicit permission to use the full scale. However, even with elaborate prompts, the underlying tendency toward safe interior scores is likely to persist to some degree, as it may reflect RLHF-induced conservatism rather than prompt-level uncertainty.
 \end{enumerate}
 
 \subsection{Limitations}
 
-Several limitations warrant acknowledgment. First, our degradation axes, while designed to be orthogonal, may have residual correlations (\eg information deletion may incidentally affect coherence). Second, the corpus is limited to English-language expository text from a single source; generalization to other languages, genres, or domains requires further investigation. Third, we test only two models; the effect may vary across the broader model landscape. Fourth, GPT-5~mini's forced temperature of 1.0 introduces stochasticity absent from Gemini's temperature-0 configuration, though our ICC analysis suggests this difference has modest practical impact.
+Several limitations warrant acknowledgment. First, our degradation axes, while designed to be orthogonal, may have residual correlations (\eg information deletion may incidentally affect coherence). Second, the corpus is limited to English-language expository text from a single source; generalization to other languages, genres, or domains requires further investigation. Third, we test only two models; the effect may vary across the broader model landscape.
+
+Fourth, the temperature asymmetry between models (GPT-5~mini at 1.0 vs.\ Gemini~3~Flash at 0.0) is a meaningful confound. GPT-5~mini is a reasoning model for which temperature 1.0 is the only supported configuration; lower values are not available via the API. Our ICC analysis shows that GPT's intra-condition reliability remains excellent (ICC $= 0.926$) despite the higher temperature, suggesting that the reasoning model's internal deliberation stabilizes outputs even at temperature~1.0. Moreover, a majority-vote aggregation across the three repetitions per condition yields near-identical mean scores (mean absolute difference from raw mean $< 0.05$), indicating that the stochasticity does not meaningfully shift point estimates. Nevertheless, future work should compare models at matched temperature settings where API constraints permit.
+
+Fifth, our scoring prompt is intentionally minimal to measure intrinsic calibration bias; richer prompts with rubrics, anchored scale descriptions, or chain-of-thought elicitation may yield different compression profiles and represent an important direction for future investigation.
 
 % ══════════════════════════════════════════════════════════════
 % 6. CONCLUSION
@@ -507,12 +545,32 @@ The title of this paper reflects the core finding: LLMs are, in a sense, ``conde
 
 \subsection*{Reproducibility}
 
-The complete codebase, including the degradation engine, scoring scripts, analysis pipeline, and all raw score data, is publicly available at \url{https://github.com/idreesaziz/fuck_my_life}. All experiments are deterministically reproducible via MD5-seeded randomness.
+The complete codebase, including the degradation engine, scoring scripts, analysis pipeline, and all raw score data, is publicly available at \url{https://github.com/idreesaziz/condemned-to-b}. All experiments are deterministically reproducible via MD5-seeded randomness.
 
 % ══════════════════════════════════════════════════════════════
 % REFERENCES
 % ══════════════════════════════════════════════════════════════
 \begin{thebibliography}{9}
+
+\bibitem[Guilford(1954)]{guilford1954psychometric}
+Guilford, J.~P. (1954).
+\newblock \emph{Psychometric Methods}.
+\newblock McGraw-Hill, New York, 2nd edition.
+
+\bibitem[Ke \& Ng(2019)]{ke2019automated}
+Ke, Z. and Ng, V. (2019).
+\newblock Automated essay scoring: A survey of the state of the art.
+\newblock In \emph{Proceedings of the 28th International Joint Conference on Artificial Intelligence}, pages 6300--6308.
+
+\bibitem[Kocmi \& Federmann(2023)]{kocmi2023large}
+Kocmi, T. and Federmann, C. (2023).
+\newblock Large language models are state-of-the-art evaluators of translation quality.
+\newblock In \emph{Proceedings of the 24th Annual Conference of the European Association for Machine Translation}, pages 193--203.
+
+\bibitem[Liu et~al.(2023)]{liu2023calibrating}
+Liu, Y., Iter, D., Xu, Y., Wang, S., Xu, R., and Zhu, C. (2023).
+\newblock G-Eval: {NLG} evaluation using {GPT-4} with better human alignment.
+\newblock In \emph{Proceedings of the 2023 Conference on Empirical Methods in Natural Language Processing}, pages 2511--2522.
 
 \bibitem[Stevens(1971)]{stevens1971issues}
 Stevens, S.~S. (1971).
@@ -530,5 +588,28 @@ Zheng, L., Chiang, W.-L., Sheng, Y., Zhuang, S., Wu, Z., Zhuang, Y., Lin, Z., Li
 \newblock \emph{Advances in Neural Information Processing Systems}, 36.
 
 \end{thebibliography}
+
+% ══════════════════════════════════════════════════════════════
+% SUPPLEMENTARY MATERIAL
+% ══════════════════════════════════════════════════════════════
+\clearpage
+\appendix
+\section*{Supplementary Material}
+\setcounter{figure}{0}
+\renewcommand{\thefigure}{S\arabic{figure}}
+
+\begin{figure*}[h]
+\centering
+\includegraphics[width=\textwidth]{G6_boxplots_grid.png}
+\caption{Score distributions by axis and level for each model. Boxes show IQR; whiskers extend to 1.5$\times$IQR. The interquartile range is narrowest at the highest and lowest degradation levels, reflecting ceiling and floor compression.}
+\label{fig:boxplots}
+\end{figure*}
+
+\begin{figure*}[h]
+\centering
+\includegraphics[width=\textwidth]{G7_violins.png}
+\caption{Violin plots of score distributions by degradation level and model. The bimodal shape at $\lambda = 0.2$ reflects the mixture of high and low scores as degradation begins to take effect.}
+\label{fig:violins}
+\end{figure*}
 
 \end{document}
