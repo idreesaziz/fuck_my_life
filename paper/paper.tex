@@ -1,4 +1,4 @@
-\documentclass[11pt,twocolumn]{article}
+\documentclass[11pt]{article}
 
 % ── Packages ──────────────────────────────────────────────────
 \usepackage[utf8]{inputenc}
@@ -163,12 +163,12 @@ We organize results around our three primary outcomes, followed by secondary ana
 
 Table~\ref{tab:dist} summarizes the overall score distributions. Both models use only a subset of the 0--10 scale: GPT-5~mini produces scores in $[1, 9]$ and Gemini~3~Flash in $[2, 9]$. Neither model ever assigns a score of 0 or 10 across all 9{,}000 samples. Figure~\ref{fig:histograms} visualizes the full score distributions, with red arrows highlighting the empty bins at 0 and 10.
 
-\begin{figure*}[t]
+\begin{figure}[t]
 \centering
 \includegraphics[width=\textwidth]{G3_score_histograms.png}
 \caption{Overall score distributions for both models ($n = 9{,}000$ per model). Red arrows indicate scores of 0 and 10, which are never assigned. GPT-5~mini peaks at 2; Gemini~3~Flash peaks at 4.}
 \label{fig:histograms}
-\end{figure*}
+\end{figure}
 
 \begin{table}[t]
 \centering
@@ -190,12 +190,12 @@ Count of 10s & 0 & 0 \\
 \end{tabular}
 \end{table}
 
-\begin{figure*}[t]
+\begin{figure}[t]
 \centering
 \includegraphics[width=\textwidth]{G4_undegraded_dist.png}
 \caption{Score distribution for pristine (undegraded, $\lambda = 0.0$) texts only ($n = 1{,}800$ per model). Both models concentrate scores at 8--9, with neither ever assigning 10 even to expert-authored, editorially curated articles.}
 \label{fig:undegraded}
-\end{figure*}
+\end{figure}
 
 \subsection{Boundary Avoidance}
 
@@ -229,7 +229,7 @@ Both models compress the effective scoring range to well below the ideal (Table~
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=\columnwidth]{G9_calibration.png}
+\includegraphics[width=\textwidth]{G9_calibration.png}
 \caption{Calibration plot: observed mean scores vs.\ the perfect calibration reference line ($S = 10(1 - \lambda)$). The shaded area represents the compression gap---the scoring range lost to boundary avoidance.}
 \label{fig:calibration}
 \end{figure}
@@ -264,24 +264,24 @@ The average slope across axes is $-6.46$ for GPT-5~mini and $-6.18$ for Gemini~3
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=\columnwidth]{G8_forest_plot.png}
+\includegraphics[width=\textwidth]{G8_forest_plot.png}
 \caption{Forest plot of regression slopes ($\beta_1$) with 95\% CIs for each axis$\times$model combination. All slopes are significantly negative. Information deletion elicits the steepest response; coherence disruption the shallowest.}
 \label{fig:forest}
 \end{figure}
 
-\begin{figure*}[t]
+\begin{figure}[t]
 \centering
 \includegraphics[width=\textwidth]{G1_dose_response.png}
 \caption{Dose-response curves: mean LLM score vs.\ degradation level for each axis, with both models overlaid. Shaded bands represent 95\% block-bootstrap confidence intervals (resampling articles, 5{,}000 iterations). The dashed gray line shows perfect calibration. Note the concave shape---sensitivity diminishes at higher degradation levels.}
 \label{fig:doseresponse}
-\end{figure*}
+\end{figure}
 
-\begin{figure*}[t]
+\begin{figure}[t]
 \centering
 \includegraphics[width=\textwidth]{G2_cross_axis.png}
 \caption{Cross-axis sensitivity comparison per model. Both models are most sensitive to information deletion and least sensitive to coherence disruption, though the magnitude of the gap differs.}
 \label{fig:crossaxis}
-\end{figure*}
+\end{figure}
 
 \subsection{Non-linearity}
 
@@ -366,14 +366,14 @@ Despite high overall agreement (Table~\ref{tab:intermodel}), Gemini~3~Flash scor
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=\columnwidth]{G10_inter_model_scatter.png}
+\includegraphics[width=\textwidth]{G10_inter_model_scatter.png}
 \caption{Inter-model agreement scatter plot ($n = 9{,}000$ paired samples). Each point is one sample, jittered, colored by degradation level. The dashed line is the identity line; points above it indicate Gemini scored higher. Marginal histograms show each model's score distribution.}
 \label{fig:scatter}
 \end{figure}
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=\columnwidth]{G11_paired_diff.png}
+\includegraphics[width=\textwidth]{G11_paired_diff.png}
 \caption{Distribution of paired score differences (Gemini $-$ GPT). The distribution is right-shifted with a median of $+1$ and mean of $+0.89$, confirming systematic positive bias.}
 \label{fig:paireddiff}
 \end{figure}
@@ -382,12 +382,12 @@ Despite high overall agreement (Table~\ref{tab:intermodel}), Gemini~3~Flash scor
 
 Levene's test confirms significant variance heterogeneity across degradation levels for both models (GPT: $W = 136.6$, $p < 10^{-113}$; Gemini: $W = 183.6$, $p < 10^{-151}$). Score variance peaks at $\lambda = 0.2$ for both models (GPT: $\sigma^2 = 3.22$; Gemini: $\sigma^2 = 2.37$) and is lowest at $\lambda = 0.0$ (GPT: $\sigma^2 = 1.02$; Gemini: $\sigma^2 = 0.77$). This ``fan-out-then-in'' pattern reflects ceiling compression at low degradation and floor compression at high degradation. The per-level score distributions (Figure~\ref{fig:perlevel}), boxplots (Figure~\ref{fig:boxplots}), and violin plots (Figure~\ref{fig:violins}) all visualize this heteroscedasticity.
 
-\begin{figure*}[t]
+\begin{figure}[t]
 \centering
 \includegraphics[width=\textwidth]{G5_per_level_dist.png}
 \caption{Score distributions by degradation level. At $\lambda = 0.0$, scores concentrate tightly at 8--9. As degradation increases, the distribution shifts leftward and broadens, then reconcentrates at 2--4 by $\lambda = 0.8$.}
 \label{fig:perlevel}
-\end{figure*}
+\end{figure}
 
 Additional visualizations of these distributions---including boxplots by axis and level (Figure~\ref{fig:boxplots}) and violin plots by level and model (Figure~\ref{fig:violins})---are provided in the Supplementary Material.
 
@@ -421,12 +421,12 @@ Table~\ref{tab:calibration} reports the results. Affine calibration reduces the 
 
 Figure~\ref{fig:calibrecovery} visualizes the effect: the calibrated dose-response curves are pulled closer to the ideal line $S = 10(1 - \lambda)$, narrowing the shaded compression gap, though a residual error of 1.6--1.9 RMSE points remains even after calibration. This residual reflects the models' imperfect rank discrimination---their inability to linearly separate degradation levels---which no monotonic transform can correct.
 
-\begin{figure*}[t]
+\begin{figure}[t]
 \centering
 \includegraphics[width=\textwidth]{G15_calibration_recovery.png}
 \caption{Dose-response curves before and after calibration, against the ideal reference line (dashed black). Affine, sigmoid, and isotonic (nonparametric) calibrations all converge to nearly identical curves, confirming that the compression is approximately linear and the residual error represents irreducible rank-order noise.}
 \label{fig:calibrecovery}
-\end{figure*}
+\end{figure}
 
 These results carry a dual message. On the one hand, a simple two-parameter affine correction---requiring only a modest calibration set---recovers a meaningful fraction of the lost accuracy, making post-hoc calibration a practical and low-cost mitigation strategy. On the other hand, the fact that no calibration method (including the nonparametric isotonic upper bound) can reduce RMSE below $\sim$1.6 confirms that compression is not purely an offset problem: the models genuinely fail to spread scores across the full range, losing discriminative information that cannot be recovered by rescaling.
 
@@ -434,12 +434,12 @@ These results carry a dual message. On the one hand, a simple two-parameter affi
 
 Intraclass correlation coefficients (ICC(1,1)) computed across the three repetitions per condition indicate excellent scoring consistency: overall ICC $= 0.926$ for GPT-5~mini and $0.905$ for Gemini~3~Flash. Gemini achieves particularly high consistency on pristine texts (ICC $= 0.989$ at $\lambda = 0.0$), likely reflecting the determinism afforded by temperature 0.0. The mean coefficient of variation across conditions is 0.148 for GPT and 0.094 for Gemini (Table~\ref{tab:icc}). Figure~\ref{fig:consistency} presents a heatmap of mean CV by axis and level.
 
-\begin{figure*}[t]
+\begin{figure}[t]
 \centering
 \includegraphics[width=\textwidth]{G12_rep_consistency.png}
 \caption{Scoring consistency heatmap: mean coefficient of variation (CV) across three repetitions, by axis and degradation level. Lower values (lighter) indicate more consistent scoring. Gemini achieves near-perfect consistency (CV $\approx 0$) on pristine texts.}
 \label{fig:consistency}
-\end{figure*}
+\end{figure}
 
 \begin{table}[t]
 \centering
@@ -469,12 +469,12 @@ Within-model effect sizes for the undegraded-vs.-maximally-degraded contrast are
 
 \textbf{Category effects.} Kruskal-Wallis tests on undegraded scores ($\lambda = 0.0$) reveal significant category differences for both models (GPT: $H = 202.6$, $p < 10^{-42}$; Gemini: $H = 377.1$, $p < 10^{-80}$). Both models score Science \& Technology highest (GPT: 8.44; Gemini: 8.73) and Politics \& Society lowest (GPT: 7.58; Gemini: 7.88), as shown in Figure~\ref{fig:category}. This suggests that even among expert-authored articles from a single platform, LLMs exhibit domain-dependent scoring preferences.
 
-\begin{figure*}[t]
+\begin{figure}[t]
 \centering
 \includegraphics[width=\textwidth]{G13_category_effects.png}
 \caption{Undegraded scores ($\lambda = 0.0$) by article category. Both models score Science \& Technology highest and Politics \& Society lowest, despite all articles being expert-authored pieces from The Conversation of comparable editorial quality.}
 \label{fig:category}
-\end{figure*}
+\end{figure}
 
 \subsection{Multiple Testing Correction}
 
@@ -492,12 +492,12 @@ Our results demonstrate that score compression is a robust, reproducible phenome
 
 The compression manifests asymmetrically. At the ceiling, pristine texts receive mean scores of 8.0--8.3 rather than the expected 10 (Figure~\ref{fig:undegraded}). At the floor, maximally degraded texts receive mean scores of 2.5--3.3 rather than the expected 2. The net effect is a concave dose-response curve, confirmed by significant quadratic terms in all eight axis$\times$model regressions. The residual diagnostics (Figure~\ref{fig:residuals}) further confirm the non-linear relationship.
 
-\begin{figure*}[t]
+\begin{figure}[t]
 \centering
 \includegraphics[width=\textwidth]{G14_residuals.png}
 \caption{Residual diagnostics from linear regression of score on degradation level. Left: residuals vs.\ fitted values with LOWESS smoother (red), showing systematic curvature. Right: Q-Q plots showing heavy-tailed, discrete residuals---expected for bounded integer scores.}
 \label{fig:residuals}
-\end{figure*}
+\end{figure}
 
 \subsection{Axis-Specific Sensitivity}
 
@@ -600,18 +600,18 @@ Zheng, L., Chiang, W.-L., Sheng, Y., Zhuang, S., Wu, Z., Zhuang, Y., Lin, Z., Li
 \setcounter{figure}{0}
 \renewcommand{\thefigure}{S\arabic{figure}}
 
-\begin{figure*}[h]
+\begin{figure}[h]
 \centering
 \includegraphics[width=\textwidth]{G6_boxplots_grid.png}
 \caption{Score distributions by axis and level for each model. Boxes show IQR; whiskers extend to 1.5$\times$IQR. The interquartile range is narrowest at the highest and lowest degradation levels, reflecting ceiling and floor compression.}
 \label{fig:boxplots}
-\end{figure*}
+\end{figure}
 
-\begin{figure*}[h]
+\begin{figure}[h]
 \centering
 \includegraphics[width=\textwidth]{G7_violins.png}
 \caption{Violin plots of score distributions by degradation level and model. The bimodal shape at $\lambda = 0.2$ reflects the mixture of high and low scores as degradation begins to take effect.}
 \label{fig:violins}
-\end{figure*}
+\end{figure}
 
 \end{document}
