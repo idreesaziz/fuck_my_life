@@ -63,7 +63,7 @@ Large language models are increasingly deployed as automated text evaluators---g
 
 This behavior---which we term \emph{score compression}---has significant practical consequences. If the effective scoring range is compressed from $[0, 10]$ to approximately $[2, 9]$, then the discriminative resolution of the scale is reduced by 30\% or more. Fine-grained quality distinctions are lost, ranking reliability degrades, and threshold-based decisions (\eg ``pass if score $\geq 7$'') become miscalibrated.
 
-To quantify this gap precisely: if LLMs were perfectly calibrated, a text degraded to fraction $\lambda$ of its original quality should receive a score $S = 10(1 - \lambda)$. Instead, we observe approximately $S \approx 8 - 6.5\lambda$ for GPT-5~mini and $S \approx 8 - 6.2\lambda$ for Gemini~3~Flash---the intercept falls short of~10 and the slope attains only $\sim$65\% of the ideal gradient, compressing the usable scoring range by roughly a third.
+To quantify this gap precisely: under a naive linear calibration model, a text degraded to fraction $\lambda$ of its original quality should receive a score $S = 10(1 - \lambda)$. Instead, we observe approximately $S \approx 8 - 6.5\lambda$ for GPT-5~mini and $S \approx 8 - 6.2\lambda$ for Gemini~3~Flash---the intercept falls short of~10 and the slope attains only $\sim$65\% of the ideal gradient, compressing the usable scoring range by roughly a third.
 
 In this paper, we present a rigorous, controlled experiment designed to measure score compression precisely. Our approach has three key features:
 
@@ -203,13 +203,13 @@ To assess whether the absence of extreme scores is merely a consequence of the e
 
 \subsection{Primary Outcome 1: Compression Ratio}
 
-We define the compression ratio as the observed mean score range divided by the ideal range under perfect linear calibration. The reference model assumes that a perfectly calibrated scorer would map degradation level $\lambda$ to a score $S = 10(1 - \lambda)$, yielding 10 for pristine text and linearly decreasing with degradation intensity. Under this model, the expected score span between $\lambda = 0$ and $\lambda = 0.8$ is $10(1 - 0) - 10(1 - 0.8) = 8$ points. We use this span rather than the full 0--10 range because our experiment does not include $\lambda = 1.0$ (see below), and the reference must match the experimental conditions:
+We define the compression ratio as the observed mean score range divided by the expected range under a naive linear calibration model. This reference assumes that an ideal linear scorer would map degradation level $\lambda$ to a score $S = 10(1 - \lambda)$, yielding 10 for pristine text and linearly decreasing with degradation intensity. Under this model, the expected score span between $\lambda = 0$ and $\lambda = 0.8$ is $10(1 - 0) - 10(1 - 0.8) = 8$ points. We use this span rather than the full 0--10 range because our experiment does not include $\lambda = 1.0$ (see below), and the reference must match the experimental conditions:
 \begin{equation}
     \rho = \frac{\bar{S}(\lambda = 0) - \bar{S}(\lambda = 0.8)}{10(1 - 0) - 10(1 - 0.8)} = \frac{\bar{S}(0) - \bar{S}(0.8)}{8}
     \label{eq:compression}
 \end{equation}
 
-A value of $\rho = 1$ indicates perfect calibration; $\rho < 1$ indicates compression.
+A value of $\rho = 1$ indicates no compression (exact agreement with the naive reference); $\rho < 1$ indicates compression.
 
 \begin{table}[!t]
 \centering
@@ -225,12 +225,12 @@ Gemini 3 Flash & 0.621 & [0.603, 0.634] & Yes \\
 \end{tabular}
 \end{table}
 
-Both models compress the effective scoring range to well below the ideal (Table~\ref{tab:compression}). GPT-5~mini uses approximately 69\% of the available range; Gemini~3~Flash uses only 62\%. Both confidence intervals exclude 1.0, confirming that compression is statistically robust. Notably, Gemini exhibits greater compression despite scoring higher on average, driven primarily by a higher floor at maximum degradation ($\bar{S}(0.8) = 3.32$ vs.\ 2.51 for GPT). Figure~\ref{fig:calibration} visualizes this compression gap against the perfect calibration line.
+Both models compress the effective scoring range to well below the ideal (Table~\ref{tab:compression}). GPT-5~mini uses approximately 69\% of the available range; Gemini~3~Flash uses only 62\%. Both confidence intervals exclude 1.0, confirming that compression is statistically robust. Notably, Gemini exhibits greater compression despite scoring higher on average, driven primarily by a higher floor at maximum degradation ($\bar{S}(0.8) = 3.32$ vs.\ 2.51 for GPT). Figure~\ref{fig:calibration} visualizes this compression gap against the naive calibration line.
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=\textwidth]{G9_calibration.png}
-\caption{Calibration plot: observed mean scores vs.\ the perfect calibration reference line ($S = 10(1 - \lambda)$). The shaded area represents the compression gap---the scoring range lost to boundary avoidance.}
+\caption{Calibration plot: observed mean scores vs.\ the naive calibration reference line ($S = 10(1 - \lambda)$). The shaded area represents the compression gap---the scoring range lost to boundary avoidance.}
 \label{fig:calibration}
 \end{figure}
 
@@ -260,7 +260,7 @@ Lexical & $-6.38$ (0.10) & 0.64 & $-5.26$ (0.09) & 0.60 \\
 \end{tabular}
 \end{table}
 
-The average slope across axes is $-6.46$ for GPT-5~mini and $-6.18$ for Gemini~3~Flash. Under perfect calibration, a slope of $-10$ would be expected (each 0.1 increase in degradation level should decrease the score by 1 point). Both models are approximately 62--65\% as sensitive as a perfectly calibrated scorer. Figure~\ref{fig:forest} presents a forest plot of all slopes with 95\% confidence intervals.
+The average slope across axes is $-6.46$ for GPT-5~mini and $-6.18$ for Gemini~3~Flash. Under the naive linear reference, a slope of $-10$ would be expected (each 0.1 increase in degradation level should decrease the score by 1 point). Both models are approximately 62--65\% as sensitive as a naive linear scorer. Figure~\ref{fig:forest} presents a forest plot of all slopes with 95\% confidence intervals.
 
 \begin{figure}[t]
 \centering
@@ -272,7 +272,7 @@ The average slope across axes is $-6.46$ for GPT-5~mini and $-6.18$ for Gemini~3
 \begin{figure}[t]
 \centering
 \includegraphics[width=\textwidth]{G1_dose_response.png}
-\caption{Dose-response curves: mean LLM score vs.\ degradation level for each axis, with both models overlaid. Shaded bands represent 95\% block-bootstrap confidence intervals (resampling articles, 5{,}000 iterations). The dashed gray line shows perfect calibration. Note the concave shape---sensitivity diminishes at higher degradation levels.}
+\caption{Dose-response curves: mean LLM score vs.\ degradation level for each axis, with both models overlaid. Shaded bands represent 95\% block-bootstrap confidence intervals (resampling articles, 5{,}000 iterations). The dashed gray line shows the naive linear reference. Note the concave shape---sensitivity diminishes at higher degradation levels.}
 \label{fig:doseresponse}
 \end{figure}
 
