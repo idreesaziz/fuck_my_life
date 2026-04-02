@@ -23,6 +23,73 @@ load_dotenv()
 SYSTEM_PROMPT = "Rate the quality of the following text from 0 to 10. Respond with ONLY the number."
 
 _SCORE_TOKENS = frozenset({"0","1","2","3","4","5","6","7","8","9","10"})
+_SINGLE_DIGIT_TOKENS = frozenset({"0","1","2","3","4","5","6","7","8","9"})
+
+
+def _extract_score_probs(lp) -> dict | None:
+    """
+    Build a normalised {0..10: float} probability dict from Ollama logprobs.
+
+    Handles two tokenisation styles transparently:
+      - Model has a single "10" token  → read it directly from top_logprobs.
+      - Model splits "10" into "1"+"0" → detect via the generated sequence and
+        compute P("10") = P("1") * P("0"|"1") exactly.
+
+    For the ambiguous "1" token in top_logprobs:
+      - If the vocabulary contains a dedicated "10" token (seen anywhere in
+        top_logprobs), then "1" unambiguously means score 1.
+      - If there is no "10" token in the vocabulary, "1" is the start of the
+        two-token sequence for score 10; P(score=1) cannot be recovered from
+        the first position alone, so we assign all "1" mass to score 10.
+    """
+    if not (lp and lp.content):
+        return None
+
+    raw_probs: dict[int, float] = {}
+
+    first_pos = lp.content[0]
+    first_tok = first_pos.token.strip()
+    first_prob = math.exp(first_pos.logprob)
+
+    # Scan top_logprobs at position 1 to learn about the vocabulary
+    top_tokens = {alt.token.strip(): math.exp(alt.logprob)
+                  for alt in first_pos.top_logprobs}
+    has_dedicated_ten = "10" in top_tokens
+
+    # ── Handle the generated (chosen) token(s) ───────────────────────────────
+    if first_tok == "10":
+        # Model has a single "10" token and chose it
+        raw_probs[10] = first_prob
+
+    elif first_tok == "1" and len(lp.content) > 1 and lp.content[1].token.strip() == "0":
+        # Two-token "10": P("10") = P("1") * P("0" | "1") — exact joint prob
+        raw_probs[10] = math.exp(first_pos.logprob + lp.content[1].logprob)
+
+    elif first_tok in _SINGLE_DIGIT_TOKENS:
+        raw_probs[int(first_tok)] = first_prob
+
+    # ── Handle alternatives from top_logprobs ────────────────────────────────
+    for tok, prob in top_tokens.items():
+        if tok == "10":
+            # Dedicated token — exact
+            raw_probs[10] = raw_probs.get(10, 0.0) + prob
+
+        elif tok in {"0","2","3","4","5","6","7","8","9"}:
+            score = int(tok)
+            raw_probs[score] = raw_probs.get(score, 0.0) + prob
+
+        elif tok == "1":
+            if has_dedicated_ten:
+                # "1" is unambiguously score 1
+                raw_probs[1] = raw_probs.get(1, 0.0) + prob
+            else:
+                # No dedicated "10" token: "1" is the first half of score 10
+                raw_probs[10] = raw_probs.get(10, 0.0) + prob
+
+    total = sum(raw_probs.values())
+    if total <= 0:
+        return None
+    return {i: round(raw_probs.get(i, 0.0) / total, 6) for i in range(11)}
 
 CHECKPOINT_EVERY = 5
 MAX_RETRIES = 5
@@ -100,27 +167,7 @@ def _call_with_retry(provider: str, model_id: str, user_prompt: str,
                     top_logprobs=20,
                 )
                 raw_text = response.choices[0].message.content or ""
-
-                # Extract probability distribution over score tokens
-                score_probs = None
-                lp = response.choices[0].logprobs
-                if lp and lp.content:
-                    raw_probs = {}
-                    first = lp.content[0]
-                    # Chosen token
-                    tok = first.token.strip()
-                    if tok in _SCORE_TOKENS:
-                        raw_probs[int(tok)] = math.exp(first.logprob)
-                    # Alternatives
-                    for alt in first.top_logprobs:
-                        tok = alt.token.strip()
-                        if tok in _SCORE_TOKENS:
-                            raw_probs[int(tok)] = math.exp(alt.logprob)
-                    total = sum(raw_probs.values())
-                    if total > 0:
-                        score_probs = {i: round(raw_probs.get(i, 0.0) / total, 6)
-                                       for i in range(11)}
-
+                score_probs = _extract_score_probs(response.choices[0].logprobs)
                 return raw_text, score_probs
             elif provider == "google":
                 from google import genai
@@ -197,27 +244,7 @@ async def _call_with_retry_async(provider: str, model_id: str, user_prompt: str,
                     top_logprobs=20,
                 )
                 raw_text = response.choices[0].message.content or ""
-
-                # Extract probability distribution over score tokens
-                score_probs = None
-                lp = response.choices[0].logprobs
-                if lp and lp.content:
-                    raw_probs = {}
-                    first = lp.content[0]
-                    # Chosen token
-                    tok = first.token.strip()
-                    if tok in _SCORE_TOKENS:
-                        raw_probs[int(tok)] = math.exp(first.logprob)
-                    # Alternatives
-                    for alt in first.top_logprobs:
-                        tok = alt.token.strip()
-                        if tok in _SCORE_TOKENS:
-                            raw_probs[int(tok)] = math.exp(alt.logprob)
-                    total = sum(raw_probs.values())
-                    if total > 0:
-                        score_probs = {i: round(raw_probs.get(i, 0.0) / total, 6)
-                                       for i in range(11)}
-
+                score_probs = _extract_score_probs(response.choices[0].logprobs)
                 return raw_text, score_probs
             elif provider == "google":
                 # Google genai doesn't have async support, run in executor
