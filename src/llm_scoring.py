@@ -7,6 +7,7 @@ Standard API for both Google and OpenAI, with:
   - JSONL checkpoint every 50 samples — resume from where you left off
 """
 
+import asyncio
 import json
 import math
 import os
@@ -164,35 +165,112 @@ def _call_with_retry(provider: str, model_id: str, user_prompt: str,
     raise RuntimeError("All retries failed")
 
 
-# ── Score All Samples ────────────────────────────────────────────
+# ── Async API Call with Retry ────────────────────────────────────
 
-def _score_model(samples: list[dict], model_cfg: dict,
-                 output_dir: Path, api_key: str | None = None) -> list[dict]:
-    """Score all samples for one model. Checkpoints every 50."""
-    output_dir.mkdir(parents=True, exist_ok=True)
-    provider = model_cfg["provider"]
-    model_id = model_cfg["model_id"]
-    model_name = model_cfg["name"]
+async def _call_with_retry_async(provider: str, model_id: str, user_prompt: str,
+                                   api_key: str | None = None,
+                                   base_url: str = "http://localhost:11434",
+                                   temperature: float = 0.0) -> tuple[str, dict | None]:
+    """Async version of _call_with_retry for parallel execution.
+    
+    Returns (raw_text, score_probs).
+    score_probs is a {0..10 -> float} normalised probability dict for local
+    models (via Ollama logprobs), None for API providers.
+    """
+    for attempt in range(MAX_RETRIES):
+        try:
+            if provider == "local":
+                from openai import AsyncOpenAI
+                client = AsyncOpenAI(
+                    base_url=f"{base_url}/v1",
+                    api_key="ollama",
+                )
+                response = await client.chat.completions.create(
+                    model=model_id,
+                    messages=[
+                        {"role": "system", "content": SYSTEM_PROMPT},
+                        {"role": "user", "content": user_prompt},
+                    ],
+                    temperature=temperature,
+                    max_tokens=10,
+                    logprobs=True,
+                    top_logprobs=20,
+                )
+                raw_text = response.choices[0].message.content or ""
 
-    ckpt = _checkpoint_path(output_dir, model_name)
-    results, done_ids = _load_checkpoint(ckpt)
+                # Extract probability distribution over score tokens
+                score_probs = None
+                lp = response.choices[0].logprobs
+                if lp and lp.content:
+                    raw_probs = {}
+                    first = lp.content[0]
+                    # Chosen token
+                    tok = first.token.strip()
+                    if tok in _SCORE_TOKENS:
+                        raw_probs[int(tok)] = math.exp(first.logprob)
+                    # Alternatives
+                    for alt in first.top_logprobs:
+                        tok = alt.token.strip()
+                        if tok in _SCORE_TOKENS:
+                            raw_probs[int(tok)] = math.exp(alt.logprob)
+                    total = sum(raw_probs.values())
+                    if total > 0:
+                        score_probs = {i: round(raw_probs.get(i, 0.0) / total, 6)
+                                       for i in range(11)}
 
-    if done_ids:
-        print(f"  [Resume] {len(done_ids)} already scored, continuing...")
+                return raw_text, score_probs
+            elif provider == "google":
+                # Google genai doesn't have async support, run in executor
+                loop = asyncio.get_event_loop()
+                return await loop.run_in_executor(
+                    None,
+                    lambda: _call_with_retry(provider, model_id, user_prompt,
+                                            api_key, base_url, temperature)
+                )
+            elif provider == "openai":
+                from openai import AsyncOpenAI
+                client = AsyncOpenAI(api_key=api_key or os.environ["OPENAI_API_KEY"])
+                response = await client.chat.completions.create(
+                    model=model_id,
+                    messages=[
+                        {"role": "system", "content": SYSTEM_PROMPT},
+                        {"role": "user", "content": user_prompt},
+                    ],
+                    max_completion_tokens=1024,
+                )
+                return response.choices[0].message.content, None
+        except Exception as e:
+            err = str(e).lower()
+            transient = any(k in err for k in
+                            ["429", "rate", "limit", "quota", "503",
+                             "overloaded", "timeout", "connection", "unavailable"])
+            if transient and attempt < MAX_RETRIES - 1:
+                wait = 2 ** attempt * 5  # 5s, 10s, 20s, 40s, 80s
+                print(f"\n  [Retry {attempt+1}/{MAX_RETRIES}] "
+                      f"{str(e)[:80]}... waiting {wait}s")
+                await asyncio.sleep(wait)
+            else:
+                raise
+    raise RuntimeError("All retries failed")
 
-    remaining = [s for s in samples if s["id"] not in done_ids]
-    buffer = []
 
-    for sample in tqdm(remaining, desc=f"Scoring [{model_name}]",
-                       initial=len(done_ids), total=len(samples)):
+# ── Score All Samples (with async parallelism) ──────────────────
+
+async def _score_sample_async(sample: dict, model_cfg: dict, api_key: str | None,
+                               semaphore: asyncio.Semaphore) -> dict:
+    """Score a single sample asynchronously."""
+    async with semaphore:  # Limit to 4 concurrent requests
+        provider = model_cfg["provider"]
+        model_id = model_cfg["model_id"]
+        model_name = model_cfg["name"]
+        
         user_prompt = (
             f"Please rate the quality of the following text:\n\n"
             f"---\n{sample['degraded_text']}\n---"
         )
 
         try:
-            # Unpack both raw and score_probs here
-            raw, score_probs = _call_with_retry(
+            raw, score_probs = await _call_with_retry_async(
                 provider, model_id, user_prompt,
                 api_key=api_key,
                 base_url=model_cfg.get("base_url", "http://localhost:11434"),
@@ -205,9 +283,11 @@ def _score_model(samples: list[dict], model_cfg: dict,
                 "condition": "isolated",
                 "repetition": 0,
                 "score": score,
-                "raw_response": raw,                **({
+                "raw_response": raw,
+                **({
                     "score_probs": score_probs
-                } if score_probs is not None else {}),                **({"parse_error": True} if score is None else {}),
+                } if score_probs is not None else {}),
+                **({"parse_error": True} if score is None else {}),
             }
         except Exception as e:
             entry = {
@@ -220,20 +300,65 @@ def _score_model(samples: list[dict], model_cfg: dict,
                 "parse_error": True,
             }
 
-        results.append(entry)
-        buffer.append(entry)
+        return entry
 
-        if len(buffer) >= CHECKPOINT_EVERY:
-            _flush_checkpoint(ckpt, buffer)
-            buffer.clear()
 
-        time.sleep(0.1)
+def _score_model(samples: list[dict], model_cfg: dict,
+                 output_dir: Path, api_key: str | None = None) -> list[dict]:
+    """Score all samples for one model with 4 concurrent workers. Checkpoints every 5."""
+    output_dir.mkdir(parents=True, exist_ok=True)
+    model_name = model_cfg["name"]
 
-    if buffer:
-        _flush_checkpoint(ckpt, buffer)
-        buffer.clear()
+    ckpt = _checkpoint_path(output_dir, model_name)
+    results, done_ids = _load_checkpoint(ckpt)
 
-    return results
+    if done_ids:
+        print(f"  [Resume] {len(done_ids)} already scored, continuing...")
+
+    remaining = [s for s in samples if s["id"] not in done_ids]
+    if not remaining:
+        return results
+
+    # Run async scoring
+    async def _run_async():
+        semaphore = asyncio.Semaphore(4)  # Max 4 concurrent requests
+        buffer = []
+        
+        # Process in batches of 4 for better checkpoint alignment
+        with tqdm(total=len(samples), initial=len(done_ids),
+                  desc=f"Scoring [{model_name}]") as pbar:
+            
+            for i in range(0, len(remaining), 4):
+                batch = remaining[i:i+4]
+                
+                # Launch 4 concurrent tasks
+                tasks = [
+                    _score_sample_async(sample, model_cfg, api_key, semaphore)
+                    for sample in batch
+                ]
+                batch_results = await asyncio.gather(*tasks)
+                
+                # Add to results and buffer
+                results.extend(batch_results)
+                buffer.extend(batch_results)
+                pbar.update(len(batch_results))
+                
+                # Checkpoint every 5 samples (or at batch completion)
+                if len(buffer) >= CHECKPOINT_EVERY:
+                    _flush_checkpoint(ckpt, buffer)
+                    buffer.clear()
+                
+                # Small delay between batches
+                await asyncio.sleep(0.1)
+            
+            # Flush any remaining buffered entries
+            if buffer:
+                _flush_checkpoint(ckpt, buffer)
+        
+        return results
+
+    # Run the async function
+    return asyncio.run(_run_async())
 
 
 # ── Main Runner ─────────────────────────────────────────────────
