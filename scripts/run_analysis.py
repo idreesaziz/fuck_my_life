@@ -921,14 +921,20 @@ def test_t19(paired):
 # ═══════════════════════════════════════════════════════════════
 
 def graph_g1(df):
-    """G1: Dose-response curves (both models overlaid) — THE money figure."""
+    """G1: Dose-response curves — one line per model per axis."""
     header("G1: Dose-response curves")
-    fig, axes = plt.subplots(2, 2, figsize=(12, 10), sharex=True, sharey=True)
+    fig, axes = plt.subplots(2, 2, figsize=(14, 10), sharex=True, sharey=True)
     axes = axes.flatten()
+
+    # Distinct color + marker combos so 11 lines stay separable
+    _markers = ["o", "s", "^", "D", "v", "P", "X", "*", "h", "<", ">"]
+    _cmap = plt.cm.tab20
+    _nmod = len(MODEL_NAMES)
+    _line_colors = [_cmap(i / _nmod) for i in range(_nmod)]
 
     for i, axis in enumerate(AXES_ORDER):
         ax = axes[i]
-        for model in MODEL_NAMES:
+        for mi, model in enumerate(MODEL_NAMES):
             sub = df[(df["model"] == model) & (df["axis"] == axis)]
             means, ci_lo, ci_hi = [], [], []
             for lv in LEVELS:
@@ -938,12 +944,15 @@ def graph_g1(df):
                 means.append(m)
                 ci_lo.append(lo)
                 ci_hi.append(hi)
-            ax.plot(LEVELS, means, "o-", color=COLORS[model], label=model, lw=2, ms=6)
-            ax.fill_between(LEVELS, ci_lo, ci_hi, alpha=0.15, color=COLORS[model])
+            col = _line_colors[mi]
+            mk = _markers[mi % len(_markers)]
+            ax.plot(LEVELS, means, marker=mk, linestyle="-", color=col,
+                    label=model, lw=1.8, ms=6, markeredgewidth=0.8,
+                    markeredgecolor="white")
+            ax.fill_between(LEVELS, ci_lo, ci_hi, alpha=0.10, color=col)
 
-        # Perfect calibration reference
         perfect = [10 * (1 - lv) for lv in LEVELS]
-        ax.plot(LEVELS, perfect, "--", color="gray", alpha=0.4, lw=1,
+        ax.plot(LEVELS, perfect, "--", color="black", alpha=0.35, lw=1.2,
                 label="Perfect calibration")
 
         ax.set_title(AXIS_LABELS[axis], fontweight="bold")
@@ -952,29 +961,88 @@ def graph_g1(df):
         ax.set_xlabel("Degradation Level" if i >= 2 else "")
         ax.grid(True, alpha=0.3)
         if i == 0:
-            ax.legend(loc="lower left", fontsize=9)
+            ax.legend(loc="lower left", fontsize=8, ncol=2,
+                      framealpha=0.85, borderpad=0.5)
 
-    fig.suptitle("Dose-Response: LLM Score vs Degradation Level", fontsize=14, fontweight="bold")
+    fig.suptitle("Dose-Response: LLM Score vs Degradation Level (per model)",
+                 fontsize=14, fontweight="bold")
     fig.tight_layout()
     savefig(fig, "G1_dose_response.png")
+
+
+def graph_g1b(df):
+    """G1b: Grand-average dose-response — one line per axis, averaged across all models."""
+    header("G1b: Grand-average dose-response (all models combined)")
+    _axis_colors = {"grammar": "#1f77b4", "coherence": "#ff7f0e",
+                    "information": "#2ca02c", "lexical": "#d62728"}
+    _axis_markers = {"grammar": "o", "coherence": "s",
+                     "information": "^", "lexical": "D"}
+
+    fig, ax = plt.subplots(figsize=(8, 6))
+
+    for axis in AXES_ORDER:
+        sub = df[df["axis"] == axis]
+        means, ci_lo, ci_hi = [], [], []
+        for lv in LEVELS:
+            lv_sub = sub[sub["level"] == lv]["score"]
+            m = float(lv_sub.mean())
+            # 95% CI via SEM across the pooled distribution
+            se = float(lv_sub.sem())
+            means.append(m)
+            ci_lo.append(m - 1.96 * se)
+            ci_hi.append(m + 1.96 * se)
+        col = _axis_colors[axis]
+        mk = _axis_markers[axis]
+        ax.plot(LEVELS, means, marker=mk, linestyle="-", color=col,
+                label=AXIS_LABELS[axis], lw=2.2, ms=8,
+                markeredgewidth=0.8, markeredgecolor="white")
+        ax.fill_between(LEVELS, ci_lo, ci_hi, alpha=0.15, color=col)
+        # Annotate the mean value at each level
+        for lv, m in zip(LEVELS, means):
+            ax.annotate(f"{m:.2f}", xy=(lv, m),
+                        xytext=(0, 7), textcoords="offset points",
+                        ha="center", fontsize=7.5, color=col)
+
+    perfect = [10 * (1 - lv) for lv in LEVELS]
+    ax.plot(LEVELS, perfect, "--", color="black", alpha=0.4, lw=1.5,
+            label="Perfect calibration")
+
+    n_models = len(MODEL_NAMES)
+    ax.set_xlabel("Degradation Level", fontsize=12)
+    ax.set_ylabel("Mean LLM Score (avg across all models)", fontsize=12)
+    ax.set_title(
+        f"Grand-Average Dose-Response by Axis\n"
+        f"(averaged across {n_models} models, ±95% CI)",
+        fontweight="bold", fontsize=13)
+    ax.set_ylim(-0.5, 10.5)
+    ax.legend(fontsize=11)
+    ax.grid(True, alpha=0.3)
+    fig.tight_layout()
+    savefig(fig, "G1b_grand_avg_dose_response.png")
 
 
 def graph_g2(df):
     """G2: Cross-axis comparison per model."""
     header("G2: Cross-axis comparison")
-    fig, axes = plt.subplots(1, 2, figsize=(14, 5), sharey=True)
+    _n = len(MODEL_NAMES)
+    _ncols = min(_n, 3)
+    _nrows = math.ceil(_n / _ncols)
+    fig, _axes_arr = plt.subplots(_nrows, _ncols, figsize=(7 * _ncols, 5 * _nrows), sharey=True, squeeze=False)
+    _axes_flat = [_axes_arr[r][c] for r in range(_nrows) for c in range(_ncols)]
     for j, model in enumerate(MODEL_NAMES):
-        ax = axes[j]
+        ax = _axes_flat[j]
         for axis in AXES_ORDER:
             sub = df[(df["model"] == model) & (df["axis"] == axis)]
             means = [sub[sub["level"] == lv]["score"].mean() for lv in LEVELS]
             ax.plot(LEVELS, means, "o-", label=AXIS_LABELS[axis], lw=2, ms=5)
         ax.set_title(model, fontweight="bold")
         ax.set_xlabel("Degradation Level")
-        ax.set_ylabel("Mean LLM Score" if j == 0 else "")
+        ax.set_ylabel("Mean LLM Score" if j % _ncols == 0 else "")
         ax.set_ylim(-0.5, 10.5)
         ax.legend()
         ax.grid(True, alpha=0.3)
+    for j in range(_n, _nrows * _ncols):
+        _axes_flat[j].set_visible(False)
     fig.suptitle("Cross-Axis Sensitivity Comparison", fontsize=14, fontweight="bold")
     fig.tight_layout()
     savefig(fig, "G2_cross_axis.png")
@@ -983,9 +1051,13 @@ def graph_g2(df):
 def graph_g3(df):
     """G3: Overall score histograms."""
     header("G3: Overall score histograms")
-    fig, axes = plt.subplots(1, 2, figsize=(12, 5), sharey=True)
+    _n = len(MODEL_NAMES)
+    _ncols = min(_n, 3)
+    _nrows = math.ceil(_n / _ncols)
+    fig, _axes_arr = plt.subplots(_nrows, _ncols, figsize=(6 * _ncols, 5 * _nrows), sharey=True, squeeze=False)
+    _axes_flat = [_axes_arr[r][c] for r in range(_nrows) for c in range(_ncols)]
     for j, model in enumerate(MODEL_NAMES):
-        ax = axes[j]
+        ax = _axes_flat[j]
         s = df[df["model"] == model]["score"]
         counts = s.value_counts().reindex(range(11), fill_value=0)
         bars = ax.bar(range(11), counts, color=COLORS[model], edgecolor="white", alpha=0.85)
@@ -997,8 +1069,10 @@ def graph_g3(df):
                             arrowprops=dict(arrowstyle="->", color="red"))
         ax.set_title(model, fontweight="bold")
         ax.set_xlabel("Score")
-        ax.set_ylabel("Count" if j == 0 else "")
+        ax.set_ylabel("Count" if j % _ncols == 0 else "")
         ax.set_xticks(range(11))
+    for j in range(_n, _nrows * _ncols):
+        _axes_flat[j].set_visible(False)
     fig.suptitle("Score Distribution (n=9,000 per model)", fontsize=14, fontweight="bold")
     fig.tight_layout()
     savefig(fig, "G3_score_histograms.png")
@@ -1007,13 +1081,14 @@ def graph_g3(df):
 def graph_g4(df):
     """G4: Undegraded (level=0.0) distribution."""
     header("G4: Undegraded distribution")
-    fig, ax = plt.subplots(figsize=(8, 5))
-    width = 0.35
+    _n = len(MODEL_NAMES)
+    width = 0.8 / _n
+    fig, ax = plt.subplots(figsize=(max(8, _n * 2), 5))
     und = df[df["level"] == 0.0]
     for j, model in enumerate(MODEL_NAMES):
         s = und[und["model"] == model]["score"]
         counts = s.value_counts().reindex(range(11), fill_value=0)
-        offset = -width / 2 + j * width
+        offset = -0.4 + j * width + width / 2
         ax.bar(np.arange(11) + offset, counts, width, label=model,
                color=COLORS[model], alpha=0.85, edgecolor="white")
     ax.set_xlabel("Score")
@@ -1033,11 +1108,13 @@ def graph_g5(df):
     fig, axes = plt.subplots(1, 5, figsize=(18, 4), sharey=True)
     for i, lv in enumerate(LEVELS):
         ax = axes[i]
-        for model in MODEL_NAMES:
+        _n5 = len(MODEL_NAMES)
+        _bw = 0.8 / _n5
+        for jj, model in enumerate(MODEL_NAMES):
             s = df[(df["model"] == model) & (df["level"] == lv)]["score"]
             counts = s.value_counts().reindex(range(11), fill_value=0) / len(s)
-            ax.bar(np.arange(11) + (-0.2 if model == MODEL_NAMES[0] else 0.2),
-                   counts, 0.35, color=COLORS[model], alpha=0.8, label=model)
+            _off = -0.4 + jj * _bw + _bw / 2
+            ax.bar(np.arange(11) + _off, counts, _bw, color=COLORS[model], alpha=0.8, label=model)
         ax.set_title(f"Level {lv:.1f}", fontweight="bold")
         ax.set_xlabel("Score")
         ax.set_xticks(range(0, 11, 2))
@@ -1052,7 +1129,8 @@ def graph_g5(df):
 def graph_g6(df):
     """G6: Boxplots axis × level grid."""
     header("G6: Boxplots (axis × level)")
-    fig, axes = plt.subplots(2, 4, figsize=(16, 8), sharey=True)
+    _n = len(MODEL_NAMES)
+    fig, axes = plt.subplots(_n, 4, figsize=(16, 4 * _n), sharey=True, squeeze=False)
     for row, model in enumerate(MODEL_NAMES):
         for col, axis in enumerate(AXES_ORDER):
             ax = axes[row, col]
@@ -1067,7 +1145,7 @@ def graph_g6(df):
                 ax.set_title(AXIS_LABELS[axis], fontweight="bold")
             if col == 0:
                 ax.set_ylabel(model, fontsize=11, fontweight="bold")
-            if row == 1:
+            if row == len(MODEL_NAMES) - 1:
                 ax.set_xlabel("Level")
             ax.set_ylim(-0.5, 10.5)
             ax.grid(axis="y", alpha=0.3)
@@ -1083,9 +1161,11 @@ def graph_g7(df):
     positions = []
     violins_data = []
     labels = []
+    _n = len(MODEL_NAMES)
+    _spacing = _n + 1
     for i, lv in enumerate(LEVELS):
         for j, model in enumerate(MODEL_NAMES):
-            pos = i * 3 + j
+            pos = i * _spacing + j
             s = df[(df["model"] == model) & (df["level"] == lv)]["score"].values
             positions.append(pos)
             violins_data.append(s)
@@ -1094,11 +1174,11 @@ def graph_g7(df):
     parts = ax.violinplot(violins_data, positions=positions, showmeans=True,
                           showmedians=True, widths=0.8)
     for i, pc in enumerate(parts["bodies"]):
-        model = MODEL_NAMES[i % 2]
+        model = MODEL_NAMES[i % _n]
         pc.set_facecolor(COLORS[model])
         pc.set_alpha(0.6)
 
-    ax.set_xticks([i * 3 + 0.5 for i in range(5)])
+    ax.set_xticks([i * _spacing + (_n - 1) / 2 for i in range(5)])
     ax.set_xticklabels([f"{lv:.1f}" for lv in LEVELS])
     ax.set_xlabel("Degradation Level")
     ax.set_ylabel("Score")
@@ -1209,12 +1289,12 @@ def graph_g10(paired):
 
     # Marginals
     ax_top.hist(paired["gpt_score"], bins=np.arange(-0.5, 11.5, 1),
-                color=COLORS["GPT-5 mini"], alpha=0.7, edgecolor="white")
+                color=COLORS.get("gpt-5-mini", "#2171b5"), alpha=0.7, edgecolor="white")
     ax_top.set_ylabel("Count")
     plt.setp(ax_top.get_xticklabels(), visible=False)
 
     ax_right.hist(paired["gemini_score"], bins=np.arange(-0.5, 11.5, 1),
-                  color=COLORS["Gemini 3 Flash"], alpha=0.7, edgecolor="white",
+                  color=COLORS.get("gemini-3-flash", "#e6550d"), alpha=0.7, edgecolor="white",
                   orientation="horizontal")
     ax_right.set_xlabel("Count")
     plt.setp(ax_right.get_yticklabels(), visible=False)
@@ -1251,7 +1331,13 @@ def graph_g11(paired):
 def graph_g12(df):
     """G12: Rep consistency heatmap (mean CV)."""
     header("G12: Rep consistency heatmap")
-    fig, axes = plt.subplots(1, 2, figsize=(12, 5))
+    _n = len(MODEL_NAMES)
+    _ncols = min(_n, 3)
+    _nrows = math.ceil(_n / _ncols)
+    fig, _axes_arr = plt.subplots(_nrows, _ncols, figsize=(7 * _ncols, 5 * _nrows), squeeze=False)
+    _axes_flat = [_axes_arr[r][c] for r in range(_nrows) for c in range(_ncols)]
+    for _unused_j in range(_n, _nrows * _ncols):
+        _axes_flat[_unused_j].set_visible(False)
     for j, model in enumerate(MODEL_NAMES):
         sub = df[df["model"] == model]
         mat = np.zeros((4, 5))
@@ -1266,7 +1352,7 @@ def graph_g12(df):
                         cvs.append(scores.std(ddof=1) / m)
                 mat[ai, li] = np.mean(cvs) if cvs else 0
 
-        ax = axes[j]
+        ax = _axes_flat[j]
         im = ax.imshow(mat, cmap="YlOrRd", aspect="auto", vmin=0,
                        vmax=max(0.5, mat.max()))
         ax.set_xticks(range(5))
@@ -1294,9 +1380,15 @@ def graph_g13(df):
     # Sort categories by median score
     cat_order = und.groupby("category")["score"].median().sort_values().index.tolist()
 
-    fig, axes = plt.subplots(2, 1, figsize=(14, 10), sharex=True)
+    _n = len(MODEL_NAMES)
+    _ncols = min(_n, 2)
+    _nrows = math.ceil(_n / _ncols)
+    fig, _axes_arr = plt.subplots(_nrows, _ncols, figsize=(14, 5 * _nrows), squeeze=False)
+    _axes_flat = [_axes_arr[r][c] for r in range(_nrows) for c in range(_ncols)]
+    for _unused_j in range(_n, _nrows * _ncols):
+        _axes_flat[_unused_j].set_visible(False)
     for j, model in enumerate(MODEL_NAMES):
-        ax = axes[j]
+        ax = _axes_flat[j]
         sub = und[und["model"] == model]
         data = [sub[sub["category"] == c]["score"].values for c in cat_order]
         bp = ax.boxplot(data, tick_labels=cat_order, patch_artist=True, vert=True,
@@ -1308,8 +1400,7 @@ def graph_g13(df):
         ax.set_title(model, fontweight="bold")
         ax.grid(axis="y", alpha=0.3)
         ax.set_ylim(-0.5, 10.5)
-
-    plt.xticks(rotation=45, ha="right", fontsize=9)
+        ax.set_xticklabels(cat_order, rotation=45, ha="right", fontsize=9)
     fig.suptitle("Undegraded Scores by Article Category", fontsize=14, fontweight="bold")
     fig.tight_layout()
     savefig(fig, "G13_category_effects.png")
@@ -1318,7 +1409,8 @@ def graph_g13(df):
 def graph_g14(df):
     """G14: Residuals vs fitted + Q-Q plot."""
     header("G14: Residuals vs fitted")
-    fig, axes = plt.subplots(2, 2, figsize=(12, 10))
+    _n = len(MODEL_NAMES)
+    fig, axes = plt.subplots(_n, 2, figsize=(12, 5 * _n), squeeze=False)
     for j, model in enumerate(MODEL_NAMES):
         sub = df[df["model"] == model]
         r = sp_stats.linregress(sub["level"], sub["score"])
@@ -1578,10 +1670,9 @@ def graph_g17(lp_df):
     models = sorted(lp_df["model"].unique())
     fig, ax = plt.subplots(figsize=(8, 5))
 
-    palette_iter = iter(_COLOR_PALETTE)
     for model in models:
         sub = lp_df[lp_df["model"] == model]
-        color = COLORS.get(model, next(palette_iter))
+        color = COLORS.get(model, "#888888")
         means, lo, hi = [], [], []
         for lv in LEVELS:
             lv_sub = sub[sub["level"] == lv]["entropy"]
@@ -1694,9 +1785,17 @@ def main():
 
     discovered = sorted(df["model"].unique().tolist())
     MODEL_NAMES.extend(discovered)
-    palette_iter = iter(_COLOR_PALETTE)
+    _n_extra = sum(1 for n in MODEL_NAMES if n not in _FIXED_COLORS)
+    _tab20 = plt.cm.tab20(np.linspace(0, 1, max(_n_extra, 1)))
+    _extra_colors = [f"#{int(r*255):02x}{int(g*255):02x}{int(b*255):02x}"
+                     for r, g, b, _ in _tab20]
+    _ei = 0
     for name in MODEL_NAMES:
-        COLORS[name] = _FIXED_COLORS.get(name, next(palette_iter))
+        if name in _FIXED_COLORS:
+            COLORS[name] = _FIXED_COLORS[name]
+        else:
+            COLORS[name] = _extra_colors[_ei]
+            _ei += 1
 
     print(f"  Unified DataFrame: {len(df)} rows")
     print(f"  Paired DataFrame:  {len(paired)} rows")
@@ -1754,6 +1853,7 @@ def main():
     # ── GRAPHS ──
     print(f"\n{'═' * 64}\n GENERATING GRAPHS\n{'═' * 64}")
     graph_g1(df)
+    graph_g1b(df)
     graph_g2(df)
     graph_g3(df)
     graph_g4(df)

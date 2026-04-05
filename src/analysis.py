@@ -363,3 +363,114 @@ def run(config: dict, scored_samples: list[dict], llm_results: list[dict]):
     compute_statistics(df, output_dir)
 
     print("[Analysis] Done.")
+
+
+# ═══════════════════════════════════════════════════════════════
+# SHARED UTILITIES  (used by mitigation scripts)
+# ═══════════════════════════════════════════════════════════════
+
+RANDOM_STATE = 42
+AXES_ORDER = ["grammar", "coherence", "information", "lexical"]
+LEVELS = [0.0, 0.2, 0.4, 0.6, 0.8]
+MAX_DEGRADATION = 0.8
+IDEAL_RANGE = 10.0 * (1.0 - 0.0) - 10.0 * (1.0 - MAX_DEGRADATION)  # 8.0
+
+MODEL_SIZE_B = {
+    "phi4-mini": 3.8, "mistral-7b": 7.0, "qwen2.5-7b": 7.0,
+    "llama3.1-8b": 8.0, "gemma2-9b": 9.0, "phi4-14b": 14.0,
+    "qwen2.5-14b": 14.0, "gpt-oss-120b-fireworks": 116.8,
+    "minimax-m2p1-fireworks": 228.7, "gpt-5-mini": 100.0,
+    "gemini-3-flash": 100.0,
+}
+API_MODELS = {"gpt-5-mini", "gemini-3-flash"}
+
+
+def load_scores(root: Path) -> pd.DataFrame:
+    """Load all score JSONs + degraded_samples metadata into a single DataFrame.
+
+    Columns returned: sample_id, model, condition, score, axis, level,
+                      article, category, score_probs (dict or None).
+    """
+    samples = json.loads((root / "data/degraded/degraded_samples.json")
+                         .read_text(encoding="utf-8"))
+    meta = {}
+    for s in samples:
+        meta[s["id"]] = {
+            "article": s["source_title"],
+            "category": s.get("category", "unknown"),
+            "axis": s["axis"],
+            "level": s["level"],
+        }
+
+    scores_dir = root / "data" / "scores"
+    rows = []
+    for sf in sorted(scores_dir.glob("*.json")):
+        records = json.loads(sf.read_text(encoding="utf-8"))
+        if not records:
+            continue
+        for r in records:
+            sid = r["sample_id"]
+            if sid not in meta or r.get("score") is None:
+                continue
+            m = meta[sid]
+            rows.append({
+                "sample_id": sid,
+                "model": r["model"],
+                "condition": r.get("condition", "isolated"),
+                "score": r["score"],
+                "axis": m["axis"],
+                "level": m["level"],
+                "article": m["article"],
+                "category": m["category"],
+                "score_probs": r.get("score_probs"),
+            })
+    return pd.DataFrame(rows)
+
+
+def proxy_ground_truth(level: float | np.ndarray) -> float | np.ndarray:
+    """target_score = (1 − level / max_level) × 10."""
+    return (1.0 - np.asarray(level) / MAX_DEGRADATION) * 10.0
+
+
+def compute_compression_ratio(scores: np.ndarray) -> float:
+    """(max − min) / 10 after clipping to [0, 10]."""
+    s = np.clip(np.asarray(scores, dtype=float), 0, 10)
+    return float((s.max() - s.min()) / 10.0)
+
+
+def bootstrap_ci(x, stat_fn=np.mean, n_boot: int = 2000,
+                 ci: float = 0.95, seed: int = RANDOM_STATE):
+    """Return (point_estimate, ci_lo, ci_hi)."""
+    rng = np.random.RandomState(seed)
+    x = np.asarray(x, dtype=float)
+    point = float(stat_fn(x))
+    boots = np.array([stat_fn(rng.choice(x, len(x), replace=True))
+                      for _ in range(n_boot)])
+    alpha = (1 - ci) / 2
+    lo, hi = np.percentile(boots, [100 * alpha, 100 * (1 - alpha)])
+    return point, float(lo), float(hi)
+
+
+def safe_quantile_ranks(arr: np.ndarray) -> np.ndarray:
+    """Rank-based quantile transform → [0, 1]. Ties get average rank."""
+    from scipy.stats import rankdata
+    ranks = rankdata(arr, method="average")
+    return (ranks - 1) / max(len(arr) - 1, 1)
+
+
+def pairwise_accuracy(predicted: np.ndarray, target: np.ndarray) -> float:
+    """Fraction of concordant pairs: sign(pred_i − pred_j) == sign(target_i − target_j)."""
+    pred = np.asarray(predicted, dtype=float)
+    tgt = np.asarray(target, dtype=float)
+    n = len(pred)
+    if n < 2:
+        return float("nan")
+    concordant = 0
+    total = 0
+    for i in range(n):
+        dp = pred[i] - pred[i + 1:]
+        dt = tgt[i] - tgt[i + 1:]
+        mask = dt != 0
+        concordant += np.sum(np.sign(dp[mask]) == np.sign(dt[mask]))
+        total += mask.sum()
+    return concordant / total if total > 0 else float("nan")

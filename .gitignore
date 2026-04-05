@@ -1,13 +1,29 @@
 .env
 __pycache__/
 *.pyc
-results/
+/results/
 *.egg-info/
 dist/
 build/
 .venv/
 venv/
 
-# Large data files — scores are committed, raw text is not
+# Large data files
 data/corpus/
 data/degraded/
+data/scores/*.json
+data/scores/*.jsonl
+
+# Mitigation intermediates (large CSVs)
+output/mitigations/intermediate/
+
+# LaTeX build artifacts
+paper/*.aux
+paper/*.log
+paper/*.out
+paper/*.synctex*
+paper/*.pdf
+
+# Debug / temp scripts
+scripts/_*.py
+scripts/_*.log

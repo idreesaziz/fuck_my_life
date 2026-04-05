@@ -1,0 +1,304 @@
+{
+  "metrics": [
+    {
+      "model": "phi4-mini",
+      "size_b": 3.8,
+      "is_api": false,
+      "n_scores": 8991,
+      "mean_at_0": 8.58388888888889,
+      "mean_at_08": 7.985531441291041,
+      "compression_ratio": 0.07479468094973107,
+      "avg_slope": -0.7935519219092613,
+      "slopes": {
+        "grammar": -1.1231296442055643,
+        "coherence": -0.4710780434314807,
+        "information": -1.3533333333333335,
+        "lexical": -0.22666666666666677
+      },
+      "range_used": 7,
+      "score_std": 0.9129447133773204,
+      "compression_grammar": 0.10514756944444437,
+      "compression_coherence": 0.045217767879237813,
+      "compression_information": 0.13027777777777771,
+      "compression_lexical": 0.018611111111111134
+    },
+    {
+      "model": "mistral-7b",
+      "size_b": 7.0,
+      "is_api": false,
+      "n_scores": 9000,
+      "mean_at_0": 8.625555555555556,
+      "mean_at_08": 8.431111111111111,
+      "compression_ratio": 0.02430555555555558,
+      "avg_slope": -0.28138888888888897,
+      "slopes": {
+        "grammar": -0.40666666666666684,
+        "coherence": -0.28111111111111126,
+        "information": -0.41222222222222227,
+        "lexical": -0.025555555555555543
+      },
+      "range_used": 6,
+      "score_std": 0.5455975893579038,
+      "compression_grammar": 0.03416666666666668,
+      "compression_coherence": 0.02833333333333332,
+      "compression_information": 0.036388888888889026,
+      "compression_lexical": -0.0016666666666667052
+    },
+    {
+      "model": "qwen2.5-7b",
+      "size_b": 7.0,
+      "is_api": false,
+      "n_scores": 8998,
+      "mean_at_0": 8.813333333333333,
+      "mean_at_08": 8.367777777777778,
+      "compression_ratio": 0.05569444444444427,
+      "avg_slope": -0.5862500794160787,
+      "slopes": {
+        "grammar": -0.7455555555555561,
+        "coherence": -0.537222539886536,
+        "information": -0.8411111111111117,
+        "lexical": -0.22111111111111115
+      },
+      "range_used": 5,
+      "score_std": 0.5192637350476336,
+      "compression_grammar": 0.0708333333333333,
+      "compression_coherence": 0.050833333333333286,
+      "compression_information": 0.08111111111111113,
+      "compression_lexical": 0.019999999999999796
+    },
+    {
+      "model": "llama3.1-8b",
+      "size_b": 8.0,
+      "is_api": false,
+      "n_scores": 9000,
+      "mean_at_0": 8.63,
+      "mean_at_08": 7.383333333333334,
+      "compression_ratio": 0.15583333333333338,
+      "avg_slope": -1.5711111111111116,
+      "slopes": {
+        "grammar": -3.697777777777778,
+        "coherence": -0.6922222222222227,
+        "information": -1.2466666666666673,
+        "lexical": -0.6477777777777782
+      },
+      "range_used": 5,
+      "score_std": 1.11893028746592,
+      "compression_grammar": 0.3722222222222221,
+      "compression_coherence": 0.06583333333333341,
+      "compression_information": 0.11972222222222206,
+      "compression_lexical": 0.06555555555555559
+    },
+    {
+      "model": "gemma2-9b",
+      "size_b": 9.0,
+      "is_api": false,
+      "n_scores": 9000,
+      "mean_at_0": 8.167222222222222,
+      "mean_at_08": 5.772222222222222,
+      "compression_ratio": 0.29937499999999995,
+      "avg_slope": -3.0277777777777795,
+      "slopes": {
+        "grammar": -4.766666666666671,
+        "coherence": -2.0233333333333343,
+        "information": -3.6322222222222225,
+        "lexical": -1.6888888888888902
+      },
+      "range_used": 7,
+      "score_std": 1.2978753355810544,
+      "compression_grammar": 0.4669444444444445,
+      "compression_coherence": 0.19500000000000006,
+      "compression_information": 0.35750000000000004,
+      "compression_lexical": 0.17805555555555552
+    },
+    {
+      "model": "phi4-14b",
+      "size_b": 14.0,
+      "is_api": false,
+      "n_scores": 9000,
+      "mean_at_0": 7.933333333333334,
+      "mean_at_08": 6.526666666666666,
+      "compression_ratio": 0.1758333333333334,
+      "avg_slope": -1.8055555555555562,
+      "slopes": {
+        "grammar": -2.767777777777779,
+        "coherence": -0.46777777777777796,
+        "information": -3.091111111111113,
+        "lexical": -0.8955555555555551
+      },
+      "range_used": 6,
+      "score_std": 0.9682429131561765,
+      "compression_grammar": 0.2747222222222222,
+      "compression_coherence": 0.04583333333333339,
+      "compression_information": 0.2944444444444445,
+      "compression_lexical": 0.08833333333333337
+    },
+    {
+      "model": "qwen2.5-14b",
+      "size_b": 14.0,
+      "is_api": false,
+      "n_scores": 9000,
+      "mean_at_0": 7.862222222222222,
+      "mean_at_08": 4.305555555555555,
+      "compression_ratio": 0.44458333333333333,
+      "avg_slope": -4.5708333333333355,
+      "slopes": {
+        "grammar": -5.970000000000004,
+        "coherence": -1.2055555555555555,
+        "information": -6.6433333333333335,
+        "lexical": -4.464444444444449
+      },
+      "range_used": 7,
+      "score_std": 2.2404829006393774,
+      "compression_grammar": 0.6319444444444444,
+      "compression_coherence": 0.11722222222222223,
+      "compression_information": 0.5944444444444444,
+      "compression_lexical": 0.43472222222222223
+    },
+    {
+      "model": "gemini-3-flash",
+      "size_b": 100.0,
+      "is_api": true,
+      "n_scores": 9000,
+      "mean_at_0": 8.291666666666666,
+      "mean_at_08": 3.3227777777777776,
+      "compression_ratio": 0.6211111111111111,
+      "avg_slope": -6.176111111111114,
+      "slopes": {
+        "grammar": -6.814444444444445,
+        "coherence": -5.580000000000005,
+        "information": -7.054444444444448,
+        "lexical": -5.255555555555558
+      },
+      "range_used": 8,
+      "score_std": 2.152978132134898,
+      "compression_grammar": 0.7180555555555557,
+      "compression_coherence": 0.5433333333333334,
+      "compression_information": 0.6872222222222222,
+      "compression_lexical": 0.5358333333333334
+    },
+    {
+      "model": "gpt-5-mini",
+      "size_b": 100.0,
+      "is_api": true,
+      "n_scores": 9000,
+      "mean_at_0": 7.992222222222222,
+      "mean_at_08": 2.511111111111111,
+      "compression_ratio": 0.6851388888888889,
+      "avg_slope": -6.460555555555558,
+      "slopes": {
+        "grammar": -6.816666666666674,
+        "coherence": -4.77666666666667,
+        "information": -7.865555555555553,
+        "lexical": -6.383333333333337
+      },
+      "range_used": 9,
+      "score_std": 2.4626167361706823,
+      "compression_grammar": 0.7783333333333333,
+      "compression_coherence": 0.47138888888888886,
+      "compression_information": 0.8016666666666666,
+      "compression_lexical": 0.6891666666666667
+    },
+    {
+      "model": "gpt-oss-120b-fireworks",
+      "size_b": 116.8,
+      "is_api": false,
+      "n_scores": 9000,
+      "mean_at_0": 6.857777777777778,
+      "mean_at_08": 2.825,
+      "compression_ratio": 0.5040972222222222,
+      "avg_slope": -4.788333333333337,
+      "slopes": {
+        "grammar": -5.161111111111112,
+        "coherence": -3.356666666666668,
+        "information": -6.083333333333342,
+        "lexical": -4.552222222222223
+      },
+      "range_used": 10,
+      "score_std": 2.245052069371,
+      "compression_grammar": 0.5794444444444444,
+      "compression_coherence": 0.3466666666666667,
+      "compression_information": 0.598611111111111,
+      "compression_lexical": 0.4916666666666667
+    },
+    {
+      "model": "minimax-m2p1-fireworks",
+      "size_b": 228.7,
+      "is_api": false,
+      "n_scores": 8933,
+      "mean_at_0": 7.348824188129899,
+      "mean_at_08": 3.9643056330172897,
+      "compression_ratio": 0.42306481938907614,
+      "avg_slope": -4.22942442447521,
+      "slopes": {
+        "grammar": -5.59116194523493,
+        "coherence": -2.0356005271288984,
+        "information": -5.561022637720463,
+        "lexical": -3.7299125878165516
+      },
+      "range_used": 11,
+      "score_std": 2.6694507888034837,
+      "compression_grammar": 0.5882582582582583,
+      "compression_coherence": 0.19586506799386671,
+      "compression_information": 0.5212443946188341,
+      "compression_lexical": 0.38410256920139996
+    }
+  ],
+  "statistics": {
+    "local_only": {
+      "n": 9,
+      "pearson_logsize_vs_compression": {
+        "r": 0.7833626194635177,
+        "p": 0.012514337107186696
+      },
+      "spearman_size_vs_compression": {
+        "rho": 0.8571731229523382,
+        "p": 0.0031439309803344886
+      },
+      "kendall_size_vs_compression": {
+        "tau": 0.6859943405700353,
+        "p": 0.011412036386001648
+      },
+      "pearson_logsize_vs_slope": {
+        "r": -0.7673258372403087,
+        "p": 0.015797958842777054
+      }
+    },
+    "all_models": {
+      "n": 11,
+      "pearson_logsize_vs_compression": {
+        "r": 0.8355650802907278,
+        "p": 0.0013610552068384597
+      },
+      "spearman_size_vs_compression": {
+        "rho": 0.8283948065945334,
+        "p": 0.0016313022176238274
+      },
+      "kendall_size_vs_compression": {
+        "tau": 0.6357639532057509,
+        "p": 0.00755598211017197
+      },
+      "pearson_logsize_vs_slope": {
+        "r": -0.8288555974336173,
+        "p": 0.001612819001674378
+      }
+    },
+    "per_axis_spearman": {
+      "grammar": {
+        "rho": 0.7826271377219073,
+        "p": 0.004404556640651567
+      },
+      "coherence": {
+        "rho": 0.8100877390454828,
+        "p": 0.002502849325228199
+      },
+      "information": {
+        "rho": 0.8009342052709577,
+        "p": 0.0030499825638104494
+      },
+      "lexical": {
+        "rho": 0.8421251072563213,
+        "p": 0.0011445900546009895
+      }
+    }
+  }
+}

@@ -330,3 +330,35 @@ print(f"  Score range used: {df['llm_score'].min()} to {df['llm_score'].max()} "
 print(f"  Never scored: {set(range(11)) - set(df['llm_score'].unique())}")
 
 print(f"\nAll figures saved to {out}/")
+
+
+# ═══════════════════════════════════════════════════════════════
+# LOWESS response curve helper (used by mitigation comparison)
+# ═══════════════════════════════════════════════════════════════
+
+def plot_lowess_response_curve(levels, scores, ax=None, label=None,
+                               color=None, frac=0.4, **kwargs):
+    """Plot a LOWESS-smoothed dose-response curve.
+
+    Parameters
+    ----------
+    levels : array-like  — degradation levels (x)
+    scores : array-like  — mitigated/raw scores (y)
+    ax : matplotlib Axes (created if None)
+    label, color : standard matplotlib kwargs
+    frac : LOWESS bandwidth (0–1)
+
+    Returns the Axes object.
+    """
+    import statsmodels.api as sm
+    levels = np.asarray(levels, dtype=float)
+    scores = np.asarray(scores, dtype=float)
+
+    lowess = sm.nonparametric.lowess(scores, levels, frac=frac)
+    xs, ys = lowess[:, 0], lowess[:, 1]
+
+    if ax is None:
+        _, ax = plt.subplots(figsize=(7, 5))
+
+    ax.plot(xs, ys, label=label, color=color, linewidth=2, **kwargs)
+    return ax
